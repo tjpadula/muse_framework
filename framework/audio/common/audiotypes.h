@@ -108,7 +108,8 @@ enum class SoundTrackType {
     MP3,
     OGG,
     FLAC,
-    WAV
+    WAV,
+    AAC
 };
 
 enum class AudioSampleFormat {
@@ -146,6 +147,7 @@ struct SoundTrackFormat {
 
         case SoundTrackType::MP3:
         case SoundTrackType::OGG:
+        case SoundTrackType::AAC:
             // For lossy, bitrate must be positive
             return bitRate > 0;
 
