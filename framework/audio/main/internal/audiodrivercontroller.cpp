@@ -47,6 +47,7 @@
 
 #ifdef Q_OS_MACOS
 #include "audio/driver/platform/osx/osxaudiodriver.h"
+#include "audio/driver/platform/osx/osxdirectaudiodriver.h"
 #endif
 
 #ifdef Q_OS_WASM
@@ -105,7 +106,9 @@ IAudioDriverPtr AudioDriverController::createDriver(const std::string& name) con
 #endif
 
 #ifdef Q_OS_MACOS
-    UNUSED(name);
+    if (name == "CoreAudioDirect") {
+        return std::shared_ptr<IAudioDriver>(new OSXDirectAudioDriver());
+    }
     return std::shared_ptr<IAudioDriver>(new OSXAudioDriver());
 #endif
 
@@ -147,6 +150,7 @@ std::vector<std::string> AudioDriverController::availableAudioDrivers() const
 
 #ifdef Q_OS_MACOS
     names.push_back("CoreAudio");
+    names.push_back("CoreAudioDirect");
     return names;
 #endif
 
