@@ -143,45 +143,64 @@ RetVal<Progress> NetworkManager::execRequest(RequestType requestType, const QUrl
         return RetVal<Progress>::make_ret((int)Err::NetworkError);
     }
 
-    size_t requestId = 0;
-    if (!m_requestDataMap.empty()) {
-        requestId = m_requestDataMap.rbegin()->first + 1;
-    }
-
+    const size_t requestId = m_lastRequestId++;
     RequestData& requestData = m_requestDataMap[requestId];
     requestData.incomingData = incomingData;
     requestData.outgoingData = outgoingData;
     requestData.reply = reply;
     requestData.progress.start();
     requestData.progress.canceled().onNotify(this, [this, requestId]() {
-        m_requestDataMap[requestId].reply->abort();
+        auto it = m_requestDataMap.find(requestId);
+        IF_ASSERT_FAILED(it != m_requestDataMap.end() && it->second.reply) {
+            return;
+        }
+
+        it->second.reply->abort();
     });
 
     if (!std::holds_alternative<NoOutgoingDevice>(outgoingData)) {
         connect(reply, &QNetworkReply::uploadProgress, this, [this, requestId](qint64 curr, qint64 total) {
-            m_requestDataMap[requestId].progress.progress(curr, total);
+            auto it = m_requestDataMap.find(requestId);
+            IF_ASSERT_FAILED(it != m_requestDataMap.end()) {
+                return;
+            }
+
+            it->second.progress.progress(curr, total);
         });
     }
 
     if (incomingData) {
         connect(reply, &QNetworkReply::downloadProgress, this, [this, requestId](qint64 curr, qint64 total) {
-            m_requestDataMap[requestId].progress.progress(curr, total);
+            auto it = m_requestDataMap.find(requestId);
+            IF_ASSERT_FAILED(it != m_requestDataMap.end()) {
+                return;
+            }
+
+            it->second.progress.progress(curr, total);
         });
 
         connect(reply, &QNetworkReply::readyRead, this, [this, requestId]() {
-            RequestData& data = m_requestDataMap[requestId];
+            auto it = m_requestDataMap.find(requestId);
+            IF_ASSERT_FAILED(it != m_requestDataMap.end()) {
+                return;
+            }
+
+            RequestData& data = it->second;
+            IF_ASSERT_FAILED(data.incomingData && data.reply) {
+                return;
+            }
+
             data.incomingData->write(data.reply->readAll());
         });
     }
 
     connect(reply, &QNetworkReply::finished, this, [this, requestId]() {
         auto it = m_requestDataMap.find(requestId);
-        IF_ASSERT_FAILED(it != m_requestDataMap.end()) {
+        IF_ASSERT_FAILED(it != m_requestDataMap.end() && it->second.reply) {
             return;
         }
 
         RequestData& data = it->second;
-        data.reply->disconnect();
         data.progress.canceled().disconnect(this);
 
         if (std::holds_alternative<QIODevicePtr>(data.outgoingData)) {
@@ -191,6 +210,8 @@ RetVal<Progress> NetworkManager::execRequest(RequestType requestType, const QUrl
         closeDevice(data.incomingData);
 
         const Ret ret = retFromReply(data.reply);
+        data.reply->deleteLater();
+
         Progress progress = data.progress;
         m_requestDataMap.erase(it);
         progress.finish(ret);
