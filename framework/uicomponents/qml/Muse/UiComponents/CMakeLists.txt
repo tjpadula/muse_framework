@@ -143,6 +143,7 @@ qt_add_qml_module(muse_uicomponents_qml
         StyledListView.qml
         StyledMenuLoader.qml
         StyledPopupView.qml
+        StyledPopupLoader.qml
         StyledScrollBar.qml
         StyledSlider.qml
         StyledTabBar.qml
