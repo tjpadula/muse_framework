@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2024 MuseScore Limited and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -19,39 +19,28 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef MU_ISYSTEMINFO_H
-#define MU_ISYSTEMINFO_H
 
-#include "types/version.h"
+#pragma once
 
-#include "modularity/imoduleinterface.h"
+#include <QObject>
+#include <qqmlintegration.h>
 
-namespace muse {
-class ISystemInfo : MODULE_GLOBAL_INTERFACE
+#include "../../shortcutsinstancemodel.h"
+
+namespace muse::shortcuts {
+class iOSShortcutsInstanceModel : public ShortcutsInstanceModel
 {
-    INTERFACE_ID(ISystemInfo)
+    Q_OBJECT
+
+    QML_NAMED_ELEMENT(ShortcutsInstanceModel)
+
 public:
-    virtual ~ISystemInfo() = default;
+    explicit iOSShortcutsInstanceModel(QObject* parent = nullptr);
 
-    enum class CpuArchitecture {
-        Unknown,
-        Arm,
-        Arm64,
-        x86_64
-    };
+private:
+    void doLoadShortcuts() override;
+    void doActivate(const QString& seq) override;
 
-    enum class ProductType {
-        Unknown,
-        Windows,
-        MacOS,
-        iOS,
-        Linux
-    };
-
-    virtual CpuArchitecture cpuArchitecture() const = 0;
-    virtual ProductType productType() const = 0;
-    virtual Version productVersion() const = 0;
+    QHash<QString, QString> m_macSequenceMap;
 };
 }
-
-#endif // MU_ISYSTEMINFO_H

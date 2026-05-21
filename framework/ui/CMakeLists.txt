@@ -116,6 +116,31 @@ if (OS_IS_MAC)
             SKIP_UNITY_BUILD_INCLUSION ON
             SKIP_PRECOMPILE_HEADERS ON
     )
+
+    if (IOS)
+
+        # Additional source files
+        target_sources(muse_ui PRIVATE
+            internal/platform/ios/StIntervalTimer.cpp
+            internal/platform/ios/StIntervalTimer.h
+            internal/platform/ios/IOSNotificationListener.mm
+            internal/platform/ios/IOSNotificationListener.h
+            )
+
+    # Don't mix C++ and Objective-C++ in unity builds
+    set_source_files_properties(
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/ios/IOSNotificationListener.mm
+        PROPERTIES
+            SKIP_UNITY_BUILD_INCLUSION ON
+            SKIP_PRECOMPILE_HEADERS ON
+    )
+
+        list(APPEND IOS_PATHS
+            ${PROJECT_SOURCE_DIR}/src/framework/ui/internal/platform/ios
+            )
+
+    endif(IOS)
+
 elseif(OS_IS_WIN)
     target_sources(muse_ui PRIVATE
         internal/platform/windows/windowsplatformtheme.cpp
@@ -164,8 +189,13 @@ if (MUSE_QT_SUPPORT)
 endif()
 
 if (OS_IS_MAC)
+if(IOS)
+    find_library(UIKit NAMES UIKit)
+    target_link_libraries(muse_ui PRIVATE ${UIKit})
+else(IOS)
     find_library(AppKit NAMES AppKit)
     target_link_libraries(muse_ui PRIVATE ${AppKit})
+endif(IOS)
 endif()
 
 if (MUSE_MODULE_UI_TESTS)

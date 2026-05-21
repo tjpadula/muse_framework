@@ -56,7 +56,7 @@ io::path_t ShortcutsConfiguration::shortcutsUserAppDataPath() const
 
 io::path_t ShortcutsConfiguration::shortcutsAppDataPath() const
 {
-#if defined(Q_OS_MACOS)
+#if defined(Q_OS_MAC)
     return m_config.value("shortcuts_mac").toPath();
 #endif
 

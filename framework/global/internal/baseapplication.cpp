@@ -411,8 +411,12 @@ Qt::KeyboardModifiers BaseApplication::keyboardModifiers() const
 
 void BaseApplication::restart()
 {
+#if defined(Q_OS_IOS)
+    NOT_SUPPORTED;
+#else
     m_finishMode = FinishMode::Restart;
     QCoreApplication::exit();
+#endif
 }
 
 void BaseApplication::finish()

@@ -34,6 +34,12 @@
 #include "global/globalmodule.h"
 
 #include "muse_framework_config.h"
+#include "app_config.h"
+
+#if defined(Q_OS_IOS)
+#include "platform/ios/IOSNotificationListener.h"
+#include "platform/ios/StIntervalTimer.h"
+#endif
 
 using namespace muse;
 using namespace muse::ui;
@@ -46,6 +52,11 @@ GuiApplication::GuiApplication(const std::shared_ptr<CmdOptions>& options)
 void GuiApplication::doSetup(const std::shared_ptr<CmdOptions>& options)
 {
     BaseApplication::doSetup(options);
+
+#if defined(Q_OS_IOS)
+    // See if we can hook in to the notifications.
+    iOSNotificationListenerConnect();
+#endif
 
     // ====================================================
     // Setup modules: onDelayedInit
@@ -90,6 +101,10 @@ void GuiApplication::setupGraphicsApi()
     if (GraphicsApiProvider::graphicsApi() == GraphicsApi::Software) {
         gApiProvider->destroy();
     } else {
+#if defined(Q_OS_IOS)
+		gApiProvider->destroy();
+		gApiProvider->setGraphicsApiStatus(required, GraphicsApiProvider::Status::Checked);
+#else
         LOGI() << "Detecting problems with graphics api";
         gApiProvider->listen([this, gApiProvider, required](bool res) {
             if (res) {
@@ -104,6 +119,7 @@ void GuiApplication::setupGraphicsApi()
             }
             gApiProvider->destroy();
         });
+#endif
     }
 }
 
@@ -136,8 +152,10 @@ bool GuiApplication::loadMainWindow(const muse::modularity::ContextPtr& ctxId)
         return false;
     }
 
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
     QString platform = "mac";
+#elif defined(Q_OS_IOS)
+    QString platform = "ios";
 #elif defined(Q_OS_WIN)
     QString platform = "win";
 #else
