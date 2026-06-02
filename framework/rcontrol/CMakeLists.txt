@@ -41,6 +41,22 @@ set_target_properties(musescore-mcpbridge PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
+if (IOS)
+
+	set_target_properties(musescore-mcpbridge PROPERTIES    
+		XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Development"
+		XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "9DSE6N75KE"
+		XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic
+		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.Humble-Earth-Productions-Inc.MuseScore"
+	)
+	
+	message (WARNING "Hardwired XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY for target musescore-mcpbridge:" \"Apple Development\")
+	message (WARNING "Hardwired XCODE_ATTRIBUTE_DEVELOPMENT_TEAM for target musescore-mcpbridge:" \"9DSE6N75KE\")
+	message (WARNING "Hardwired XCODE_ATTRIBUTE_CODE_SIGN_STYLE for target musescore-mcpbridge:" Automatic)
+	message (WARNING "Hardwired MACOSX_BUNDLE_GUI_IDENTIFIER for target musescore-mcpbridge:" \"com.Humble-Earth-Productions-Inc.MuseScore\")
+
+endif (IOS)
+
 #if (MUSE_MODULE_RCONTROL_TESTS)
 #    add_subdirectory(tests)
 #endif()
