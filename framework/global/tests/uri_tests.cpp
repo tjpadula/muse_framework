@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2021 MuseScore Limited and others
@@ -76,7 +76,7 @@ TEST_F(Global_UriTests, Uri_LocalFile)
     io::path_t path1 = uri1.toLocalFile();
 
     EXPECT_TRUE(uri1.isValid());
-    EXPECT_EQ(path1, originPath);
+    EXPECT_EQ(path1, io::absoluteFilePath(originPath));
 }
 
 TEST_F(Global_UriTests, UriQuery_Parse)

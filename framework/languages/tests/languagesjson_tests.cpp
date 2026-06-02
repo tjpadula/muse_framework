@@ -2,10 +2,10 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -30,11 +30,11 @@
 
 using namespace muse;
 
-TEST(Languages_Json, DISABLED_Correctness)
+TEST(Languages_Json, Correctness)
 {
     GlobalInject<io::IFileSystem> fileSystem;
 
-    const io::path_t filePath(muse_languages_test_DATA_ROOT "/../../../../share/locale/languages.json");
+    const io::path_t filePath(MUSE_LANGUAGES_JSON_PATH);
 
     RetVal<ByteArray> data = fileSystem()->readFile(filePath);
     ASSERT_TRUE(data.ret);

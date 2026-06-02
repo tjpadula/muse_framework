@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2021 MuseScore Limited and others
@@ -32,11 +32,7 @@
 #include <sstream>
 #include <utility>
 
-#ifdef SYSTEM_UTFCPP
-#include <utf8cpp/utf8.h>
-#else
-#include "global/thirdparty/utfcpp/utf8.h"
-#endif
+#include <utf8.h>
 
 #include "bytearray.h"
 

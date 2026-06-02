@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2021 MuseScore Limited and others
@@ -538,6 +538,9 @@ enum class Code : char16_t {
     LINE_ARROW_RIGHT = 0xF4BD,
     FILLED_ARROW_LEFT = 0xF4BE,
     FILLED_ARROW_RIGHT = 0xF4BF,
+
+    WAVEFORM_MULTIVIEW = 0xF4C0,
+    WAVEFORM_HALFWAVE = 0xF4C1,
 
     VIDEO = 0xF4C2,
 

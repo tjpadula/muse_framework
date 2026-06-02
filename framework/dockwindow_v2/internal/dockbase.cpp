@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2021 MuseScore Limited and others
@@ -658,7 +658,7 @@ void DockBase::componentComplete()
         content->setObjectName(name + "_content");
     }
 
-    auto* dockWidgetView = new KDDockWidgets::QtQuick::DockWidget(name);
+    auto* dockWidgetView = new KDDockWidgets::QtQuick::DockWidget(iocContext()->id, name);
     dockWidgetView->setObjectName(name);
     m_dockWidget = dockWidgetView->dockWidget();
     dockWidgetView->setGuestItem(content);

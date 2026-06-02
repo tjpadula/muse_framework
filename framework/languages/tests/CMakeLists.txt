@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # MuseScore-CLA-applies
 #
-# MuseScore
+# MuseScore Studio
 # Music Composition & Notation
 #
-# Copyright (C) 2024 MuseScore BVBA and others
+# Copyright (C) 2024 MuseScore Limited and others
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -27,5 +27,7 @@ set(MODULE_TEST_SRC
 set(MODULE_TEST_LINK muse_languages)
 
 set(MODULE_TEST_DATA_ROOT ${CMAKE_CURRENT_LIST_DIR})
+
+set(MODULE_TEST_DEF "MUSE_LANGUAGES_JSON_PATH=\"${MUSE_FRAMEWORK_SRC_PATH}/languages/resources/languages.json\"")
 
 include(SetupGTest)

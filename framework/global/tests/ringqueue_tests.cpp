@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2025 MuseScore Limited and others
@@ -57,6 +57,7 @@ TEST_F(Global_Concurrency_RingQueueTests, FixedSizeQueue)
         int iteration = 0;
         int successCount = 0;
         while (iteration < 10000) { // anti freeze
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
             ++iteration;
             Msg m;
             bool ok = q.tryPop(m);
@@ -104,6 +105,7 @@ TEST_F(Global_Concurrency_RingQueueTests, FixedSizeQueue_Full)
         int iteration = 0;
         int successCount = 0;
         while (iteration < 10000) { // anti freeze
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
             ++iteration;
             Msg m;
             bool ok = q.tryPop(m);
@@ -218,6 +220,7 @@ TEST_F(Global_Concurrency_RingQueueTests, FixedSizeQueue_FullContinue)
         int iteration = 0;
         int successCount = 0;
         while (iteration < 10000) { // anti freeze
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
             ++iteration;
             Msg m;
             bool ok = q.tryPop(m);
@@ -271,6 +274,7 @@ TEST_F(Global_Concurrency_RingQueueTests, FixedSizeQueue_SlowRead)
         int iteration = 0;
         int successCount = 0;
         while (iteration < 10000) { // anti freeze
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
             ++iteration;
             Msg m;
             bool ok = q.tryPop(m);

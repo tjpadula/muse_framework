@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2025 MuseScore Limited and others
@@ -41,6 +41,9 @@ public:
     virtual bool isLazyProcessingOfOnlineSoundsEnabled() const = 0;
     virtual void setIsLazyProcessingOfOnlineSoundsEnabled(bool enabled) = 0;
     virtual async::Channel<bool> isLazyProcessingOfOnlineSoundsEnabledChanged() const = 0;
+
+    virtual bool useSoundFontLowPassFilter() const = 0;
+    virtual async::Channel<bool> useSoundFontLowPassFilterChanged() const = 0;
 
     virtual AudioInputParams defaultAudioInputParams() const = 0;
 };

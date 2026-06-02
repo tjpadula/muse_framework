@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2021 MuseScore Limited and others
@@ -132,10 +132,16 @@ Ret FluidSynth::init(const OutputSpec& spec)
 
     fluid_settings_setint(m_fluid->settings, "synth.chorus.active", 0);
     fluid_settings_setint(m_fluid->settings, "synth.reverb.active", 0);
+    fluid_settings_setint(m_fluid->settings, "synth.iir-lowpass-filter.active", config()->useSoundFontLowPassFilter() ? 1 : 0);
 
     fluid_settings_setstr(m_fluid->settings, "audio.sample-format", "float");
 
     createFluidInstance();
+
+    config()->useSoundFontLowPassFilterChanged().onReceive(this, [this](bool use) {
+        fluid_settings_setint(m_fluid->settings, "synth.iir-lowpass-filter.active", use ? 1 : 0);
+        m_flushSoundRequested = true;
+    });
 
     m_sequencer.setOnOffStreamFlushed([this]() {
         m_flushSoundRequested = true;

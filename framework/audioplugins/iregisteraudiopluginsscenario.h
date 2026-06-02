@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2021 MuseScore Limited and others
@@ -42,8 +42,9 @@ public:
 
     virtual PluginScanResult scanPlugins(Progress* progress = nullptr) const = 0;
 
-    virtual Ret updatePluginsRegistry() = 0;
-    virtual void registerNewPlugins(const io::paths_t& pluginPaths) = 0;
+    virtual void updatePluginsRegistry() = 0;
+
+    virtual Ret registerNewPlugins(const io::paths_t& pluginPaths) = 0;
     virtual Ret unregisterRemovedPlugins(const audio::AudioResourceIdList& pluginIds) = 0;
 
     virtual Ret registerPlugin(const io::path_t& pluginPath) = 0;

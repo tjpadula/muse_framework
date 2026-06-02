@@ -79,6 +79,9 @@ option(MUSE_MODULE_MUSESAMPLER_LOAD_IN_DEBUG "Load MuseSampler module in debug b
 declare_muse_module_opt(NETWORK ON)
 option(MUSE_MODULE_NETWORK_WEBSOCKET "Enable websocket support" OFF)
 
+declare_muse_module_opt(RCOMMAND ON)
+declare_muse_module_opt(RCONTROL ON)
+
 declare_muse_module_opt(SHORTCUTS ON)
 declare_muse_module_opt(TESTFLOW ON)
 declare_muse_module_opt(TOURS ON)
@@ -102,7 +105,6 @@ option(MUSE_THREADS_SUPPORT "Build with threads support" ON)
 option(MUSE_CONFIGURATION_IS_WEB "Configuration is web" OFF)
 
 # === Build options ===
-option(MUSE_COMPILE_BUILD_64 "Build 64 bit version" ON)
 option(MUSE_COMPILE_ASAN "Enable Address Sanitizer" OFF)
 option(MUSE_COMPILE_USE_PCH "Use precompiled headers." ON)
 

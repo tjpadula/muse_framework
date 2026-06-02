@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2025 MuseScore Limited and others
@@ -342,13 +342,22 @@ Ret AbstractCloudService::checkCloudIsAvailable() const
     }
 
     Ret ret = make_ok();
-
     QEventLoop loop;
+
     progress.val.finished().onReceive(this, [&ret, &loop](const ProgressResult& res) {
         ret = res.ret;
         loop.quit();
     });
+
+    QTimer timer;
+    timer.setSingleShot(true);
+    QObject::connect(&timer, &QTimer::timeout, [&progress]() {
+        progress.val.cancel();
+    });
+    timer.start(5000);
+
     loop.exec();
+    timer.stop();
 
     return ret;
 }

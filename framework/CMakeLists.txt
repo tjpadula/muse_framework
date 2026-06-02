@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # MuseScore-CLA-applies
 #
-# MuseScore
+# MuseScore Studio
 # Music Composition & Notation
 #
 # Copyright (C) 2021 MuseScore Limited and others
@@ -99,6 +99,14 @@ endif()
 
 if (MUSE_MODULE_NETWORK)
     add_subdirectory(network)
+endif()
+
+if (MUSE_MODULE_RCOMMAND)
+    add_subdirectory(rcommand)
+endif()
+
+if (MUSE_MODULE_RCONTROL)
+    add_subdirectory(rcontrol)
 endif()
 
 if (MUSE_MODULE_SHORTCUTS)

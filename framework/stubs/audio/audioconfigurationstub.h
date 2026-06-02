@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2025 MuseScore Limited and others
@@ -59,6 +59,10 @@ public:
     bool autoProcessOnlineSoundsInBackground() const override;
     void setAutoProcessOnlineSoundsInBackground(bool process) override;
     async::Channel<bool> autoProcessOnlineSoundsInBackgroundChanged() const override;
+
+    bool useSoundFontLowPassFilter() const override;
+    void setUseSoundFontLowPassFilter(bool value) override;
+    async::Channel<bool> useSoundFontLowPassFilterChanged() const override;
 
     bool shouldMeasureInputLag() const override;
 };

@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2021 MuseScore Limited and others
@@ -83,7 +83,7 @@ io::path_t LanguagesConfiguration::languagesUserAppDataPath() const
 
 io::path_t LanguagesConfiguration::builtinLanguagesJsonPath() const
 {
-    return languagesAppDataPath() + "/languages.json";
+    return ":/languages/resources/languages.json";
 }
 
 io::path_t LanguagesConfiguration::builtinLanguageFilePath(const QString& resourceName, const QString& languageCode) const

@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2025 MuseScore Limited and others
@@ -130,6 +130,20 @@ void AudioConfigurationStub::setAutoProcessOnlineSoundsInBackground(bool)
 }
 
 async::Channel<bool> AudioConfigurationStub::autoProcessOnlineSoundsInBackgroundChanged() const
+{
+    return {};
+}
+
+bool AudioConfigurationStub::useSoundFontLowPassFilter() const
+{
+    return false;
+}
+
+void AudioConfigurationStub::setUseSoundFontLowPassFilter(bool)
+{
+}
+
+async::Channel<bool> AudioConfigurationStub::useSoundFontLowPassFilterChanged() const
 {
     return {};
 }

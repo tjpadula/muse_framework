@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2021 MuseScore Limited and others
@@ -409,7 +409,7 @@ DockPageView* DropController::currentPage() const
 
 DockBase* DropController::draggedDock() const
 {
-    auto windowBeingDragged = KDDockWidgets::Core::DragController::instance()->windowBeingDragged();
+    auto windowBeingDragged = KDDockWidgets::Core::DragController::instance(iocContext()->id)->windowBeingDragged();
     if (!windowBeingDragged || windowBeingDragged->dockWidgets().isEmpty()) {
         return nullptr;
     }

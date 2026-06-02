@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore-CLA-applies
  *
- * MuseScore
+ * MuseScore Studio
  * Music Composition & Notation
  *
  * Copyright (C) 2021 MuseScore Limited and others
@@ -52,8 +52,9 @@ public:
 
     PluginScanResult scanPlugins(Progress* progress = nullptr) const override;
 
-    Ret updatePluginsRegistry() override;
-    void registerNewPlugins(const io::paths_t& pluginPaths) override;
+    void updatePluginsRegistry() override;
+
+    Ret registerNewPlugins(const io::paths_t& pluginPaths) override;
     Ret unregisterRemovedPlugins(const audio::AudioResourceIdList& pluginIds) override;
 
     Ret registerPlugin(const io::path_t& pluginPath) override;
