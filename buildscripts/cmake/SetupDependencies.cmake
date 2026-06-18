@@ -28,7 +28,7 @@ if (NOT DEFINED EXTDEPS_DIR OR EXTDEPS_DIR STREQUAL "")
     if (NOT EXISTS "${EXTDEPS_DIR}/buildtools/manifest.cmake")
         find_package(Git REQUIRED)
         execute_process(COMMAND ${GIT_EXECUTABLE} clone --quiet
-                        https://github.com/kryksyh/muse_deps_private.git "${EXTDEPS_DIR}"
+                        https://github.com/musescore/muse_deps_sandbox.git "${EXTDEPS_DIR}"
                         RESULT_VARIABLE _rc)
         if (NOT _rc EQUAL 0)
             message(FATAL_ERROR "muse_deps clone failed; set EXTDEPS_DIR to an existing checkout")
