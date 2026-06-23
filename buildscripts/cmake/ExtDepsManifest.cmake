@@ -18,6 +18,7 @@ if (OS_IS_WIN AND MUSE_MODULE_AUDIO)
 endif()
 
 if (MUSE_MODULE_AUDIO AND MUSE_MODULE_AUDIO_EXPORT)
+    require_dep(ogg) # flac and opusenc link against ogg
     require_dep(fdk-aac)
     require_dep(flac)
     require_dep(lame)
