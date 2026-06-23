@@ -721,10 +721,16 @@ void DockBase::applySizeConstraints()
     dockWidgetView->setMaximumSize(maximumSize);
 
     if (KDDockWidgets::Core::FloatingWindow* window = m_dockWidget->floatingWindow()) {
-        window->view()->setMinimumSize(minimumSize);
-        window->view()->setMaximumSize(maximumSize);
+        //! NOTE: The floating window draws shadow around the dock content (see DockFloatingWindow.qml),
+        //! so the window must be larger than the content by that shadow on each side.
+        const int shadow = 2 * (DOCK_WINDOW_SHADOW + 1 /*border*/);
+        const QSize windowMinimumSize = minimumSize + QSize(shadow, shadow);
+        const QSize windowMaximumSize = maximumSize + QSize(shadow, shadow);
 
-        const QSize winSize = adjustSizeByConstraints(window->view()->geometry().size(), minimumSize, maximumSize);
+        window->view()->setMinimumSize(windowMinimumSize);
+        window->view()->setMaximumSize(windowMaximumSize);
+
+        const QSize winSize = adjustSizeByConstraints(window->view()->geometry().size(), windowMinimumSize, windowMaximumSize);
         const QRect winRect(window->dragRect().topLeft(), winSize);
         window->view()->setGeometry(winRect);
     }
