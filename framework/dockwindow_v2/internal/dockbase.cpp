@@ -570,55 +570,46 @@ void DockBase::resize(int width, int height)
 {
     TRACEFUNC;
 
-    if (width == this->width() && height == this->height()) {
-        return;
-    }
-
     if (!m_dockWidget) {
         return;
     }
 
-    KDDockWidgets::Core::Group* group = groupForDockWidget(m_dockWidget);
-    if (!group || m_dockWidget != group->currentDockWidget()) {
+    width = std::max(width, m_minimumWidth);
+    height = std::max(height, m_minimumHeight);
+
+    if (m_maximumWidth > 0) {
+        width = std::min(width, std::max(m_maximumWidth, m_minimumWidth));
+    }
+
+    if (m_maximumHeight > 0) {
+        height = std::min(height, std::max(m_maximumHeight, m_minimumHeight));
+    }
+
+    const int deltaWidth = width - static_cast<int>(this->width());
+    const int deltaHeight = height - static_cast<int>(this->height());
+    if (deltaWidth == 0 && deltaHeight == 0) {
         return;
     }
 
-    const KDDockWidgets::Core::Item* item = group->layoutItem();
-    if (!item) {
-        return;
+    int left = 0;
+    int top = 0;
+    int right = 0;
+    int bottom = 0;
+
+    switch (location()) {
+    case Location::Bottom: top = deltaHeight;
+        break;
+    case Location::Top: bottom = deltaHeight;
+        break;
+    case Location::Left: right = deltaWidth;
+        break;
+    case Location::Right: left = deltaWidth;
+        break;
+    case Location::Center:
+    case Location::Undefined: break;
     }
 
-    KDDockWidgets::Core::ItemBoxContainer* parentContainer = item->parentBoxContainer();
-    if (!parentContainer) {
-        return;
-    }
-
-    width = qBound(m_minimumWidth, width, m_maximumWidth);
-    height = qBound(m_minimumHeight, height, m_maximumHeight);
-
-    QSize minSizeBackup = QSize(m_minimumWidth, m_minimumHeight);
-    QSize maxSizeBackup = QSize(m_maximumWidth, m_maximumHeight);
-
-    m_minimumWidth = width;
-    m_maximumWidth = width;
-
-    KDDockWidgets::QtQuick::Group* groupView = groupViewFor(group);
-    QQuickItem* visualItem = groupView ? groupView->visualItem() : nullptr;
-    int extraHeight = visualItem ? visualItem->property("nonContentsHeight").toInt() : 0;
-    height += extraHeight;
-
-    m_minimumHeight = height;
-    m_maximumHeight = height;
-
-    applySizeConstraints();
-    parentContainer->layoutEqually();
-
-    m_minimumWidth = minSizeBackup.width();
-    m_maximumWidth = maxSizeBackup.width();
-    m_minimumHeight = minSizeBackup.height();
-    m_maximumHeight = maxSizeBackup.height();
-
-    applySizeConstraints();
+    m_dockWidget->resizeInLayout(left, top, right, bottom);
 }
 
 muse::ui::INavigationSection* DockBase::navigationSection() const
