@@ -22,6 +22,8 @@
 
 #include "audiodrivercontroller.h"
 
+#include "common/audiotaskscheduler.h"
+#include "common/iaudiotaskscheduler.h"
 #include "global/async/async.h"
 
 #include "muse_framework_config.h"
@@ -47,6 +49,7 @@
 
 #ifdef Q_OS_MACOS
 #include "audio/driver/platform/osx/osxaudiodriver.h"
+#include "audio/driver/platform/osx/osxdirectaudiodriver.h"
 #endif
 
 #ifdef Q_OS_IOS
@@ -62,6 +65,11 @@
 using namespace muse;
 using namespace muse::audio;
 using namespace muse::audio::rpc;
+
+AudioDriverController::AudioDriverController()
+    : m_audioTaskScheduler(std::make_shared<AudioTaskScheduler>())
+{
+}
 
 IAudioDriverPtr AudioDriverController::createDriver(const std::string& name) const
 {
@@ -109,7 +117,9 @@ IAudioDriverPtr AudioDriverController::createDriver(const std::string& name) con
 #endif
 
 #ifdef Q_OS_MACOS
-    UNUSED(name);
+    if (name == "CoreAudioDirect") {
+        return std::shared_ptr<IAudioDriver>(new OSXDirectAudioDriver());
+    }
     return std::shared_ptr<IAudioDriver>(new OSXAudioDriver());
 #endif
 
@@ -156,6 +166,7 @@ std::vector<std::string> AudioDriverController::availableAudioDrivers() const
 
 #ifdef Q_OS_MACOS
     names.push_back("CoreAudio");
+    names.push_back("CoreAudioDirect");
     return names;
 #endif
 
@@ -196,6 +207,11 @@ void AudioDriverController::setNewDriver(IAudioDriverPtr newDriver)
                 updateOutputSpec();
             });
         });
+    }
+
+    auto audioWorkgroupSource = std::dynamic_pointer_cast<AudioTaskScheduler>(m_audioTaskScheduler);
+    if (audioWorkgroupSource) {
+        audioWorkgroupSource->setAudioDriver(m_audioDriver);
     }
 }
 
@@ -471,4 +487,9 @@ void AudioDriverController::changeSampleRate(sample_rate_t sampleRate)
 async::Notification AudioDriverController::outputDeviceSampleRateChanged() const
 {
     return m_outputDeviceSampleRateChanged;
+}
+
+IAudioTaskSchedulerPtr muse::audio::AudioDriverController::getAudioTaskScheduler() const
+{
+    return m_audioTaskScheduler;
 }

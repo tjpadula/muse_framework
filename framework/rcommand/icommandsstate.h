@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  * MuseScore/Audacity CLA applies
  *
- * Copyright (C) 2026 MuseScore/Audacity and others
+ * Copyright (C) MuseScore/Audacity and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -21,27 +21,23 @@
 
 #include "modularity/imoduleinterface.h"
 
-#include "global/async/promise.h"
+#include "global/async/channel.h"
 
-#include "rcommandtypes.h"
+#include "imodulecommandsstate.h"
+#include "commandtypes.h"
 
 namespace muse::rcommand {
-class RCommandable;
-class IRCommandDispatcher : MODULE_CONTEXT_INTERFACE
+class ICommandsState : MODULE_CONTEXT_INTERFACE
 {
-    INTERFACE_ID(IRCommandDispatcher)
+    INTERFACE_ID(ICommandsState);
+
 public:
-    virtual ~IRCommandDispatcher() = default;
+    virtual ~ICommandsState() = default;
 
-    using CallBack = std::function<Response (const Request& request)>;
+    virtual void reg(const IModuleCommandsStatePtr& module) = 0;
+    virtual void unreg(const IModuleCommandsStatePtr& module) = 0;
 
-    virtual async::Promise<Response> dispatch(const Request& request) = 0;
-    virtual void onRequest(RCommandable* client, const Command& command, const CallBack& callback) = 0;
-    virtual void unreg(RCommandable* client) = 0;
-
-    async::Promise<Response> dispatch(const CommandQuery& query)
-    {
-        return dispatch(make_request(query));
-    }
+    virtual CommandState commandState(const Command& command) const = 0;
+    virtual async::Channel<Command, CommandState> commandStateChanged() const = 0;
 };
 }
