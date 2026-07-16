@@ -28,7 +28,9 @@ if (OS_IS_LIN OR OS_IS_FBSD)
     option(MUSE_MODULE_AUDIO_PIPEWIRE "Use PipeWire audio driver" OFF) # Turns ON on CI
 endif()
 
-option(MUSE_MODULE_AUDIO_EXPORT "Enable audio export" ON)
+if (NOT IOS)
+    option(MUSE_MODULE_AUDIO_EXPORT "Enable audio export" ON)
+endif()
 
 # 1 - worker - NOT SUPPORTED NOW
 # 2 - driver callback

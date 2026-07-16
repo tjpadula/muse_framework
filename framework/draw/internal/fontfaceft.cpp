@@ -147,7 +147,7 @@ bool FontFaceFT::load(const FaceKey& key, const io::path_t& path, bool isSymbolM
         matrix.yx = 0;
         FT_Set_Transform(m_data->face, &matrix, nullptr);
 
-        m_data->hb_font = hb_ft_font_create(m_data->face, NULL);
+//        m_data->hb_font = hb_ft_font_create(m_data->face, NULL);
     }
 
     m_data->metrics = m_data->face->size->metrics;
