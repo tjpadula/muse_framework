@@ -37,7 +37,11 @@ endif()
 # 3 - hybrid mode - worker - RPC, driver callback - process
 set(MUSE_MODULE_AUDIO_WORKMODE 3 CACHE STRING "Audio subsystem work mode")
 
-declare_muse_module_opt(AUDIOPLUGINS ON)
+if (IOS)
+    declare_muse_module_opt(AUDIOPLUGINS OFF)
+else ()
+    declare_muse_module_opt(AUDIOPLUGINS ON)
+endif()
 
 declare_muse_module_opt(AUTOMATION ON)
 
@@ -95,9 +99,7 @@ option(MUSE_MODULE_UI_NAVIGATION_EXCLUDEPROJECT "Exclude the main project view f
 
 declare_muse_module_opt(UPDATE ON)
 
-set(VST3_SDK_VERSION "3.7")
 declare_muse_module_opt(VST OFF)
-set(MUSE_MODULE_VST_VST3_SDK_PATH "" CACHE PATH "Path to VST3_SDK. SDK version >= ${VST3_SDK_VERSION} required")
 
 declare_muse_module_opt(WORKSPACE ON)
 
@@ -113,17 +115,6 @@ option(MUSE_COMPILE_USE_PCH "Use precompiled headers." ON)
 # === Debug options ===
 option(MUSE_COMPILE_STRING_DEBUG_HACK "Enable string debug hack (only clang)" ON)
 option(MUSE_LOAD_QML_FROM_SOURCE "Load QML from source files instead of compiled resources (for development and debugging)" OFF)
-
-# === System libraries ===
-# Important for the maintainers of Linux distributions
-option(MUSE_USE_SYSTEM_FLAC "Try use system flac" OFF)
-option(MUSE_USE_SYSTEM_FREETYPE "Try use system freetype" OFF)
-option(MUSE_USE_SYSTEM_HARFBUZZ "Try use system harfbuzz" OFF)
-option(MUSE_USE_SYSTEM_OPUS "Try use system opus" OFF)
-option(MUSE_USE_SYSTEM_OPUSENC "Try use system libopusenc" OFF)
-option(MUSE_USE_SYSTEM_PUGIXML "Try use system pugixml" OFF)
-option(MUSE_USE_SYSTEM_LAME "Try use system lame" OFF)
-option(MUSE_USE_SYSTEM_UTF8CPP "Try use system utf8cpp" OFF)
 
 # === Tests ===
 option(MUSE_ENABLE_UNIT_TESTS "Build framework unit tests" ON)

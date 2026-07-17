@@ -113,12 +113,8 @@ if (IOS)
 	
 	set(FREETYPE_LIBRARIES ${FREETYPE_LIBRARIES} $ENV{QTDIR}/lib/libQt6BundledFreetype.a)
 	set(HARFBUZZ_LIBRARIES ${HARFBUZZ_LIBRARIES} $ENV{QTDIR}/lib/libQt6BundledHarfbuzz.a)
-else()
-    include(cmake/SetupFreeType.cmake)
-    include(cmake/SetupHarfBuzz.cmake)
-endif()
-
-    target_compile_definitions(muse_draw PUBLIC MUSE_MODULE_DRAW_USE_QTTEXTDRAW)
+	
+	target_compile_definitions(muse_draw PUBLIC MUSE_MODULE_DRAW_USE_QTTEXTDRAW)
 
     target_link_libraries(muse_draw PRIVATE
         ${FREETYPE_LIBRARIES}
@@ -131,10 +127,17 @@ endif()
         ${HARFBUZZ_INCLUDE_DIRS}
         #${MSDFGEN_INCLUDE_DIRS}
     )
-    
+
     message (STATUS "FREETYPE_INCLUDE_DIRS: ${FREETYPE_INCLUDE_DIRS}")
     message (STATUS "HARFBUZZ_INCLUDE_DIRS: ${HARFBUZZ_INCLUDE_DIRS}")
-#    message (FATAL_ERROR "Halt to save time.")
+else(IOS)
+    target_compile_definitions(muse_draw PUBLIC MUSE_MODULE_DRAW_USE_QTTEXTDRAW)
+
+    target_link_libraries(muse_draw PRIVATE
+        freetype::freetype
+        harfbuzz::harfbuzz
+    )
+endif(IOS)
 
 endif()
 

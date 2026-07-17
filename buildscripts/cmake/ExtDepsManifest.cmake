@@ -23,7 +23,6 @@ if (OS_IS_WIN AND MUSE_MODULE_AUDIO)
 endif()
 
 if (MUSE_MODULE_AUDIO AND MUSE_MODULE_AUDIO_EXPORT)
-    message (FATAL_ERROR "Somehow MUSE_MODULE_AUDIO_EXPORT is ON.")
     require_dep(ogg) # flac and opusenc link against ogg
     require_dep(fdk-aac)
     require_dep(flac)
