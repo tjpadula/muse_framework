@@ -1,11 +1,10 @@
-#!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# MuseScore-Studio-CLA-applies
+# MuseScore-CLA-applies
 #
 # MuseScore Studio
 # Music Composition & Notation
 #
-# Copyright (C) 2025 MuseScore Limited and others
+# Copyright (C) 2026 MuseScore Limited and others
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -19,12 +18,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-echo "Download dependencies"
-trap 'code=$?; echo "error: Download dependencies: command \`$BASH_COMMAND\` exited with code $code." >&2; exit 1' ERR
+set(MODULE_TEST muse_dockwindow_tests)
 
-wget -q --show-progress -O musescore_deps_macos.tar.gz https://raw.githubusercontent.com/cbjeukendrup/musescore_deps/main/musescore_deps_macos.tar.gz
-mkdir -p $HOME/musescore_deps_macos
-tar xf musescore_deps_macos.tar.gz -C $HOME/musescore_deps_macos
-rm musescore_deps_macos.tar.gz
+set(MODULE_TEST_SRC
+    ${CMAKE_CURRENT_LIST_DIR}/topleveltoolbarslayout_tests.cpp
+    )
 
-echo "Download dependencies done"
+set(MODULE_TEST_INCLUDE
+    ${CMAKE_CURRENT_LIST_DIR}/..
+    ${CMAKE_CURRENT_LIST_DIR}/../qml/Muse/Dock
+    )
+
+set(MODULE_TEST_LINK
+    muse_dockwindow
+    muse_dockwindow_qml
+    muse_ui_qml
+    muse_uicomponents_qml
+    Qt::Quick
+    )
+
+include(SetupGTest)

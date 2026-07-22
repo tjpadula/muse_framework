@@ -42,6 +42,7 @@ if (IOS)
 else ()
     declare_muse_module_opt(AUDIOPLUGINS ON)
 endif()
+option(MUSE_MODULE_AUDIOPLUGINS_SCAN_TRACE "Enable audio plugin scan logging" OFF)
 
 declare_muse_module_opt(AUTOMATION ON)
 
@@ -89,6 +90,8 @@ declare_muse_module_opt(RCOMMAND ON)
 declare_muse_module_opt(RCONTROL ON)
 
 declare_muse_module_opt(SHORTCUTS ON)
+option(MUSE_MODULE_SHORTCUTS_V2 "Use shortcuts v2" OFF)
+
 declare_muse_module_opt(TESTFLOW ON)
 declare_muse_module_opt(TOURS ON)
 

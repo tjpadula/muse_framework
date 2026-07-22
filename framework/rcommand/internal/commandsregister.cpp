@@ -75,7 +75,7 @@ IModuleCommandsRegisterPtr CommandsRegister::moduleRegister(const std::string& m
     return nullptr;
 }
 
-std::vector<CommandInfo> CommandsRegister::commandList() const
+std::vector<CommandInfo> CommandsRegister::commandInfoList() const
 {
     std::vector<CommandInfo> commands;
     for (const auto& module : m_modules) {
@@ -83,6 +83,21 @@ std::vector<CommandInfo> CommandsRegister::commandList() const
         commands.insert(commands.end(), infos.begin(), infos.end());
     }
     return commands;
+}
+
+const CommandInfo& CommandsRegister::commandInfo(const Command& command) const
+{
+    for (const auto& module : m_modules) {
+        const auto& infos = module.second->commandInfoList();
+        for (const auto& info : infos) {
+            if (info.command == command) {
+                return info;
+            }
+        }
+    }
+
+    static CommandInfo null;
+    return null;
 }
 
 const std::string& CommandsRegister::commandModuleName(const Command& command) const

@@ -23,6 +23,8 @@
 
 #include "shortcuts/ishortcutsconfiguration.h"
 
+#include "muse_framework_config.h"
+
 namespace muse::shortcuts {
 class ShortcutsConfigurationStub : public IShortcutsConfiguration
 {
@@ -32,5 +34,10 @@ public:
 
     io::path_t shortcutsUserAppDataPath() const override;
     io::path_t shortcutsAppDataPath() const override;
+
+#ifdef MUSE_MODULE_SHORTCUTS_V2
+    io::path_t commandShortcutsUserAppDataPath() const override;
+    io::path_t commandShortcutsAppDataPath() const override;
+#endif
 };
 }

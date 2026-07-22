@@ -19,24 +19,28 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #pragma once
 
-#include "../audiopluginstypes.h"
+#include <QObject>
+#include <qqmlintegration.h>
 
-namespace muse::audioplugins {
-inline AudioPluginType audioPluginTypeFromCategoriesString(const String& categoriesStr)
+#include "../../shortcutsinstancemodel.h"
+
+namespace muse::shortcuts {
+class MacOSShortcutsInstanceModel : public ShortcutsInstanceModel
 {
-    static const std::vector<std::pair<String, AudioPluginType> > STRING_TO_PLUGIN_TYPE_LIST = {
-        { u"Instrument", AudioPluginType::Instrument },
-        { u"Fx", AudioPluginType::Fx },
-    };
+    Q_OBJECT
 
-    for (auto it = STRING_TO_PLUGIN_TYPE_LIST.cbegin(); it != STRING_TO_PLUGIN_TYPE_LIST.cend(); ++it) {
-        if (categoriesStr.contains(it->first)) {
-            return it->second;
-        }
-    }
+    QML_NAMED_ELEMENT(ShortcutsInstanceModel)
 
-    return AudioPluginType::Undefined;
-}
+public:
+    explicit MacOSShortcutsInstanceModel(QObject* parent = nullptr);
+
+private:
+    void doLoadShortcuts() override;
+    void doActivate(const QString& seq) override;
+
+    QHash<QString, QString> m_macSequenceMap;
+};
 }
