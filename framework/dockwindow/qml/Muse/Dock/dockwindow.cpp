@@ -145,6 +145,11 @@ void DockWindow::componentComplete()
     connect(this, &QQuickItem::widthChanged, this, [this]() {
         adjustContentForAvailableSpace(m_currentPage);
     });
+#if defined(Q_OS_IOS)
+    if ((dockWindowProvider()) && (dockWindowProvider()->window() == nullptr)) {
+        dockWindowProvider()->init(this);
+    }
+#endif
 }
 
 void DockWindow::geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry)
