@@ -104,10 +104,21 @@ muse::async::Notification PopupViewCloseController::closeNotification() const
 
 bool PopupViewCloseController::eventFilter(QObject* watched, QEvent* event)
 {
+#if defined(Q_OS_IOS)
+//    if (event->type() != 1) {       // 1 == timer
+//        LOGD() << "PopupViewCloseController::eventFilter eventType: " << event->type();
+//    }
+#endif
     if (QEvent::Close == event->type() && watched == parentWindow()) {
         notifyAboutClose();
     } else if (QEvent::MouseButtonPress == event->type()) {
         doFocusOut(static_cast<QMouseEvent*>(event)->globalPosition());
+#if defined(Q_OS_IOS)
+    } else if (QEvent::TouchBegin == event->type()) {
+        if (watched != popupWindow()) {                     // touched outside the popup and its subviews
+            doFocusOut(static_cast<QTouchEvent*>(event)->points().first().position());
+        }
+#endif
     } else if (QEvent::FocusOut == event->type() && watched == popupWindow()) {
         doFocusOut(QCursor::pos());
     } else if (QEvent::Close == event->type() && watched == popupWindow()) {

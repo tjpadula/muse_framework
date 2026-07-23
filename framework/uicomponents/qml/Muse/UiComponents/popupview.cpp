@@ -97,10 +97,11 @@ void PopupView::initCloseController()
 
     m_closeController->setParentItem(parentItem());
     m_closeController->setWindow(window());
-    m_closeController->setIsCloseOnPressOutsideParent(m_closePolicies & ClosePolicy::CloseOnPressOutsideParent);
 #if defined (Q_OS_IOS)
-    m_closeController->setCanClose(true);		// this is a WAG
+    m_closeController->setIsCloseOnPressOutsideParent(true);
+    m_closeController->setCanClose(true);
 #else
+    m_closeController->setIsCloseOnPressOutsideParent(m_closePolicies & ClosePolicy::CloseOnPressOutsideParent);
     m_closeController->setCanClose(!m_closePolicies.testFlag(ClosePolicy::NoAutoClose));
 #endif
 
