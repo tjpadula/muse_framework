@@ -56,6 +56,16 @@ qt_add_qml_module(muse_ui_qml
         QtQuick
 )
 
+if(CMAKE_SYSTEM_NAME MATCHES "iOS")
+
+target_sources(muse_ui_qml
+    PRIVATE
+	iosplatformplugin.cpp
+	iosplatformplugin.h
+)
+endif()
+
+
 fixup_qml_module_dependencies(muse_ui_qml)
 
 # Necessary for the auto-generated sources

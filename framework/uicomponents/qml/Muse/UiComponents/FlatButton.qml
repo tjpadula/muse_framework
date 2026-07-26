@@ -137,6 +137,9 @@ FocusScope {
     // Most buttons don't use it and Qt has optimizations if no signal is attached. If a component needs it,
     // it can hook to it directly (the mouse area is exposed via the `mouseArea` alias property).
 
+	signal pressed()
+	signal released()
+	
     objectName: root.text
 
     implicitWidth: contentLoader.itemImplicitWidth + 2 * margins
@@ -146,6 +149,14 @@ FocusScope {
 
     function doClicked(mouse) {
         Qt.callLater(root.clicked, mouse)
+    }
+    
+    function doPressed() {
+    	root.pressed()
+    }
+
+    function doReleased() {
+    	root.released()
     }
 
     NavigationControl {
@@ -348,8 +359,13 @@ FocusScope {
 
         onPressed: {
             ui.tooltip.hide(root, true)
+            root.doPressed()
         }
 
+		onReleased: {
+			root.doReleased()
+		}
+		
         onContainsMouseChanged: {
             if (!Boolean(root.toolTipTitle) || root.toolTipShowLocked) {
                 return

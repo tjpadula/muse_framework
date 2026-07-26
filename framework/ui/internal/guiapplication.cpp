@@ -56,6 +56,7 @@ void GuiApplication::doSetup(const std::shared_ptr<CmdOptions>& options)
 #if defined(Q_OS_IOS)
     // See if we can hook in to the notifications.
     iOSNotificationListenerConnect();
+//    iOSRegisterQMLTypes();
 #endif
 
     // ====================================================

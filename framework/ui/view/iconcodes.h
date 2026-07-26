@@ -547,6 +547,12 @@ enum class Code : char16_t {
     VIDEO = 0xF4C2,
 
     PAGE_LOCK = 0xF4C3,
+    
+    ESCAPE_META_KEY = 0xF500,
+    SHIFT_META_KEY = 0xF501,
+    CONTROL_META_KEY = 0xF502,
+    OPTION_META_KEY = 0xF503,
+    COMMAND_META_KEY = 0xF504,
 
     NONE = 0xFFFF
 };

@@ -240,9 +240,17 @@ ListItemBlank {
         }
     }
 
+    Component.onCompleted: {
+//		console.log("ListItemBlank.onCompleted");
+//		console.log("    Qt.platform.os: ", Qt.platform.os);
+    }
+
     onClicked: {
         if (root.hasSubMenu) {
-            root.openSubMenuRequested(false)
+            if (Qt.platform.os === "ios")
+                root.openSubMenuRequested(true)
+            else
+                root.openSubMenuRequested(false)
             return
         }
 
