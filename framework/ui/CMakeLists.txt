@@ -132,11 +132,26 @@ if (OS_IS_MAC)
             internal/platform/ios/StIntervalTimer.h
             internal/platform/ios/IOSNotificationListener.mm
             internal/platform/ios/IOSNotificationListener.h
+            internal/platform/ios/IOSEventTrampoline.mm
+            internal/platform/ios/IOSEventTrampoline.h
+            internal/platform/ios/UIPressCustom.m
+            internal/platform/ios/UIPressCustom.h
+            internal/platform/ios/UIPressesEventCustom.m
+            internal/platform/ios/UIPressesEventCustom.h
+            internal/platform/ios/UIKeyModifiersOnly.m
+            internal/platform/ios/UIKeyModifiersOnly.h
+            internal/platform/ios/UIKeyCustom.m
+            internal/platform/ios/UIKeyCustom.h
             )
 
     # Don't mix C++ and Objective-C++ in unity builds
     set_source_files_properties(
         ${CMAKE_CURRENT_LIST_DIR}/internal/platform/ios/IOSNotificationListener.mm
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/ios/IOSEventTrampoline.mm
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/ios/UIPressCustom.m
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/ios/UIPressesEventCustom.m
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/ios/UIKeyModifiersOnly.m
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/ios/UIKeyCustom.m
         PROPERTIES
             SKIP_UNITY_BUILD_INCLUSION ON
             SKIP_PRECOMPILE_HEADERS ON
