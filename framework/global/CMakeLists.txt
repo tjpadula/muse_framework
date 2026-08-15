@@ -32,6 +32,7 @@ target_sources(muse_global PRIVATE
 
     globaltypes.h
     iapplication.h
+    iapplicationeventcontroller.h
     iglobalconfiguration.h
     log.h
     logstream.h
@@ -44,6 +45,8 @@ target_sources(muse_global PRIVATE
     functional/inplace_function_mv.h
     dataformatter.cpp
     dataformatter.h
+    stringsearch.cpp
+    stringsearch.h
     stringutils.cpp
     stringutils.h
     ptrutils.h
@@ -195,6 +198,8 @@ else()
         api/filesystemapi.cpp
         api/filesystemapi.h
 
+        internal/applicationeventcontroller.cpp
+        internal/applicationeventcontroller.h
         internal/baseapplication.cpp
         internal/baseapplication.h
         internal/cmdoptions.h

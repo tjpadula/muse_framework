@@ -71,6 +71,10 @@ struct Arg {
 };
 
 struct InputSchema {
+    InputSchema() {}
+    InputSchema(std::map<std::string, Arg> _args)
+        : args(std::move(_args)) {}
+
     std::map<std::string, Arg> args;
 };
 
@@ -93,6 +97,8 @@ struct Decoration {
         : iconCode(iconCode), checkable(checkable) {}
     Decoration(ui::IconCode::Code iconCode, Color iconColor, Checkable checkable)
         : iconCode(iconCode), iconColor(iconColor), checkable(checkable) {}
+    Decoration(Checkable checkable)
+        : checkable(checkable) {}
 };
 
 struct CommandInfo

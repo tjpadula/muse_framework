@@ -4,6 +4,10 @@ if (NOT MUSE_MODULE_AUDIO)
     set(MUSE_MODULE_MUSESAMPLER OFF)
 endif()
 
+if (NOT MUSE_MODULE_UI)
+    set(MUSE_MODULE_TOAST OFF) # Hard dependency
+endif()
+
 include(${CMAKE_CURRENT_LIST_DIR}/MuseModules.cmake)
 
 # Disable sub-options of disabled modules
@@ -20,6 +24,11 @@ if (NOT MUSE_ENABLE_UNIT_TESTS)
     foreach(NAME ${MUSE_FRAMEWORK_MODULES})
         set(MUSE_MODULE_${NAME}_TESTS OFF)
     endforeach()
+endif()
+
+if (MUSE_MODULE_DRAW_TESTS)
+    set(MUSE_MODULE_DRAW_USE_FONTFACE_FT ON)
+    set(MUSE_MODULE_DRAW_USE_FONTFACE_XT ON)
 endif()
 
 if (NOT MUSE_MODULE_DIAGNOSTICS)
@@ -61,6 +70,9 @@ endif()
 if (MUSE_QT_SUPPORT)
     add_compile_definitions(KORS_LOGGER_QT_SUPPORT)
 else()
+    set(GLOBAL_NO_INTERNAL ON)
+    set(MUSE_MODULE_DRAW_USE_QTFONTMETRICS OFF)
+    set(MUSE_MODULE_DRAW_USE_QTTEXTDRAW OFF)
     add_compile_definitions(NO_QT_SUPPORT)
 endif()
 

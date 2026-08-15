@@ -29,7 +29,7 @@
 #include "global/modularity/ioc.h"
 #include "ifontsdatabase.h"
 
-//#include "fontrendercache.h"
+#include "fontrendercache.h"
 
 namespace muse::draw {
 class IFontFace;
@@ -43,6 +43,7 @@ public:
     ~FontsEngine();
 
     void init();
+    void setRenderCacheDirPath(const io::path_t& path, const std::string& revision = std::string()) override;
 
     double lineSpacing(const Font& f) const override;
     double xHeight(const Font& f) const override;
@@ -86,6 +87,7 @@ private:
 
         bool isSymbolMode() const;
         double pixelScale() const;
+        double pixelScaleFor(const IFontFace* loadedFace) const;
     };
 
     IFontFace* createFontFace(const io::path_t& path) const;
@@ -98,6 +100,6 @@ private:
     mutable std::vector<IFontFace*> m_loadedFaces;
     mutable std::vector<RequireFace*> m_requiredFaces;
 
-    //mutable FontRenderCache m_renderCache;
+    mutable FontRenderCache m_renderCache;
 };
 }

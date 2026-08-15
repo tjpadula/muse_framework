@@ -60,6 +60,14 @@ option(MUSE_MODULE_DOCKWINDOW_KDDOCKWIDGETS_V2 "Use KDDockWidgets v2" OFF)
 declare_muse_module_opt(DRAW ON)
 option(MUSE_MODULE_DRAW_TRACE "Trace draw objects" OFF)
 option(MUSE_MODULE_DRAW_USE_QTFONTMETRICS "Use Qt font metrics (for some metrics)" ON)
+option(MUSE_MODULE_DRAW_USE_QTTEXTDRAW "Use Qt text drawing path" ON)
+if (IOS)
+	option(MUSE_MODULE_DRAW_USE_STATIC_DEPS "Use static draw dependencies" ON)
+else ()
+	option(MUSE_MODULE_DRAW_USE_STATIC_DEPS "Use static draw dependencies" OFF)
+endif()
+option(MUSE_MODULE_DRAW_USE_FONTFACE_FT "Use FreeType font face backend" ON)
+option(MUSE_MODULE_DRAW_USE_FONTFACE_XT "Use XT font face backend" OFF)
 
 declare_muse_module_opt(EXTENSIONS ON)
 
@@ -93,6 +101,7 @@ declare_muse_module_opt(SHORTCUTS ON)
 option(MUSE_MODULE_SHORTCUTS_V2 "Use shortcuts v2" OFF)
 
 declare_muse_module_opt(TESTFLOW ON)
+declare_muse_module_opt(TOAST ON)
 declare_muse_module_opt(TOURS ON)
 
 declare_muse_module_opt(UI ON)

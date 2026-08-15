@@ -22,6 +22,9 @@
 
 #include "shortcutsmodel.h"
 
+#include <QStringList>
+
+#include "containers.h"
 #include "translation.h"
 #include "types/mnemonicstring.h"
 #include "types/translatablestring.h"
@@ -56,10 +59,12 @@ QVariant ShortcutsModel::data(const QModelIndex& index, int role) const
     case RoleSequence: return sequencesToNativeText(shortcut.sequences);
     case RoleSearchKey: {
         const UiAction& action = this->action(shortcut.action);
-        return QString::fromStdString(action.code)
-               + action.title.qTranslatedWithoutMnemonic()
-               + action.description.qTranslated()
-               + sequencesToNativeText(shortcut.sequences);
+        QStringList searchKeyItems;
+        searchKeyItems << QString::fromStdString(action.code)
+                       << action.title.qTranslatedWithoutMnemonic()
+                       << action.description.qTranslated()
+                       << sequencesToNativeText(shortcut.sequences);
+        return searchKeyItems.join(u' ');
     }
     }
 
@@ -226,7 +231,17 @@ void ShortcutsModel::applySequenceToCurrentShortcut(const QString& newSequence, 
     m_shortcuts[row].sequences = Shortcut::sequencesFromString(newSequence.toStdString());
 
     if (conflictShortcutIndex >= 0 && conflictShortcutIndex < m_shortcuts.size()) {
-        m_shortcuts[conflictShortcutIndex].clear();
+        const std::vector<std::string>& newSequences = m_shortcuts[row].sequences;
+        Shortcut& conflictShortcut = m_shortcuts[conflictShortcutIndex];
+
+        muse::remove_if(conflictShortcut.sequences, [&newSequences](const std::string& sequence) {
+            return muse::contains(newSequences, sequence);
+        });
+
+        if (conflictShortcut.sequences.empty()) {
+            conflictShortcut.clear();
+        }
+
         notifyAboutShortcutChanged(index(conflictShortcutIndex));
     }
 
@@ -251,6 +266,10 @@ void ShortcutsModel::notifyAboutShortcutChanged(const QModelIndex& index)
 void ShortcutsModel::resetToDefaultSelectedShortcuts()
 {
     auto resolveConflicts = [this](const Shortcut& shortcut) {
+        if (shortcut.sequences.empty()) {
+            return;
+        }
+
         for (int i = 0; i < m_shortcuts.size(); ++i) {
             Shortcut& sc = m_shortcuts[i];
 
