@@ -39,6 +39,7 @@ CMakeLists.txt.user.*
 *.qmlc
 *.jsc
 .vs
+safety
 
 # Backup Files created by Merging Softwares (Example: Meld)
 *.orig

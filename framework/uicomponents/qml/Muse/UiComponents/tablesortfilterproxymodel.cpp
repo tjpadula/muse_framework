@@ -120,7 +120,11 @@ void TableSortFilterProxyModel::clearSort()
 void TableSortFilterProxyModel::invalidateFilters()
 {
     beginFilterChange();
-    endFilterChange(QSortFilterProxyModel::Direction::Rows);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+    QSortFilterProxyModel::endFilterChange(QSortFilterProxyModel::Direction::Rows);
+#else
+    QSortFilterProxyModel::invalidateFilter();
+#endif
 }
 
 int TableSortFilterProxyModel::mapRowToSource(int proxyRow) const
