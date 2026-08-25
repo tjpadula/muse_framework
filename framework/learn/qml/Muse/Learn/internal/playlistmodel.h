@@ -5,7 +5,7 @@
  * MuseScore Studio
  * Music Composition & Notation
  *
- * Copyright (C) 2024 MuseScore Limited and others
+ * Copyright (C) 2026 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -19,24 +19,38 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #pragma once
 
-#include <map>
+#include <QAbstractListModel>
 
-#include "../iextensionsexecpointsregister.h"
+#include "learn/learntypes.h"
 
-namespace muse::extensions {
-class ExtensionsExecPointsRegister : public IExtensionsExecPointsRegister
+namespace muse::learn {
+class PlaylistModel final : public QAbstractListModel
 {
-public:
-    ExtensionsExecPointsRegister() = default;
+    Q_OBJECT
 
-    void reg(const std::string& module, const ExecPoint& p) override;
-    ExecPoint point(const std::string& name) const override;
-    std::vector<ExecPoint> allPoints() const override;
+public:
+    explicit PlaylistModel(QObject* parent = nullptr);
+
+    const Playlist& playlist();
+    void setPlaylist(const Playlist&);
+
+    int rowCount(const QModelIndex& parent) const override;
+    QVariant data(const QModelIndex& index, int roleId) const override;
+    QHash<int, QByteArray> roleNames() const override;
 
 private:
+    enum Roles {
+        RoleTitle = Qt::UserRole,
+        RoleAuthor,
+        RoleDuration,
+        RoleUrl,
+        RoleThumbnailUrl,
+        RoleSearchKey,
+    };
 
-    std::map<std::string, ExecPoint> m_points;
+    Playlist m_playlist;
 };
 }
