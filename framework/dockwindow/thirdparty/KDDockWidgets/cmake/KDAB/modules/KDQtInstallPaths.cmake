@@ -22,6 +22,7 @@ else()
     message(FATAL_ERROR "No supported Qt version found. Make sure you find Qt before calling this")
 endif()
 
+message (STATUS "KDQtInstallPaths.cmake is trying to sneak in a qmake call.")
 execute_process(
     COMMAND ${QT_QMAKE_EXECUTABLE} -query
     RESULT_VARIABLE return_code

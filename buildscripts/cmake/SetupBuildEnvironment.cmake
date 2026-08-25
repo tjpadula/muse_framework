@@ -76,8 +76,15 @@ if(OS_IS_MAC)
             MACOSX_PACKAGE_LOCATION Resources)
 
     else(IOS)
-		set(MACOSX_DEPLOYMENT_TARGET 10.15.4)
-		set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15.4)
+# We cannot build MuseScoreQuickLookPreviewExtension with 10.15.4, not sure why
+# this was still set this way.
+#		set(MACOSX_DEPLOYMENT_TARGET 10.15.4)
+#		set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15.4)
+		set(MACOSX_DEPLOYMENT_TARGET 15.0)
+		set(CMAKE_OSX_DEPLOYMENT_TARGET 15.0)
+
+        set(CMAKE_MACOSX_DEPLOYMENT_TARGET 15.0)
+        set(OSX_DEPLOYMENT_TARGET 15.0)
     endif(IOS)
 endif(OS_IS_MAC)
 

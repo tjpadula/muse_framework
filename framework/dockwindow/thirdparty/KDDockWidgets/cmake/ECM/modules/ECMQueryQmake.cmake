@@ -30,6 +30,7 @@ function(query_qmake result_variable qt_variable)
             message(FATAL_ERROR "No qmake Qt5 binary found. Can't check ${qt_variable} as required")
         endif()
     endif()
+    message (FATAL_ERROR "ECMQueryQmake.cmake is calling qmake, naughty naughty!")
     execute_process(
         COMMAND ${QMAKE_EXECUTABLE} -query "${qt_variable}"
         RESULT_VARIABLE return_code
