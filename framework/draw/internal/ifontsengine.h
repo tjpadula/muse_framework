@@ -37,6 +37,7 @@ public:
     virtual ~IFontsEngine() = default;
 
     virtual void setRenderCacheDirPath(const io::path_t& path, const std::string& revision = std::string()) = 0;
+    virtual void clearLoadedFaces() = 0;
 
     virtual double lineSpacing(const Font& f) const = 0;
     virtual double xHeight(const Font& f) const = 0;
@@ -44,6 +45,10 @@ public:
     virtual double capHeight(const Font& ff) const = 0;
     virtual double ascent(const Font& f) const = 0;
     virtual double descent(const Font& f) const = 0;
+
+    virtual double underlinePos(const Font& f) const = 0;
+    virtual double lineWidth(const Font& f) const = 0;
+    virtual double strikeOutPos(const Font& f) const = 0;
 
     virtual bool inFont(const Font& f, char32_t ucs4) const = 0;
 
