@@ -26,7 +26,11 @@ using namespace muse::dock;
 DockStatusBar::DockStatusBar(QQuickItem* parent)
     : DockBase(DockType::StatusBar, parent)
 {
+#if defined(Q_OS_IOS)
+    constexpr int STATUS_BAR_HEIGHT = 57;
+#else
     constexpr int STATUS_BAR_HEIGHT = 28;
+#endif
 
     setMinimumHeight(STATUS_BAR_HEIGHT);
     setMaximumHeight(STATUS_BAR_HEIGHT);

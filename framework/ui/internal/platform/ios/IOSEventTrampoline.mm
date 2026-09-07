@@ -85,7 +85,6 @@ IOSEventTrampoline::IOSEventTrampoline()
 void IOSEventTrampoline::setMetaKeyState(const QString& metaKeyName, bool state)
 {
     // The others are nav-right, nav-left, nav-up, and nav-down.
-#if defined(Q_OS_IOS)
     LOGI() << "NotationStatusBarModel::setMetaKeyState key: " << metaKeyName << ", state: " << (state ? "pressed" : "released") << "\n";
     // Create a QKeyEvent and bounce it off our trampoline into Objective-C land.
     QEvent::Type anEventType = state ? QActionEvent::KeyPress : QActionEvent::KeyRelease;
@@ -144,8 +143,6 @@ void IOSEventTrampoline::setMetaKeyState(const QString& metaKeyName, bool state)
     }
     
     LOGI() << "NotationStatusBarModel::setMetaKeyState did not recognize key: " << metaKeyName << ", state: " << (state ? "pressed" : "released") << "\n";
-#endif
-    
 }
 
 void IOSEventTrampoline::dispatch(const std::string& command, const muse::actions::ActionData& args)
