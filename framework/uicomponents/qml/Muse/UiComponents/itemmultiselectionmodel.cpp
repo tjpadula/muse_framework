@@ -24,6 +24,8 @@
 
 #include <QGuiApplication>
 
+#include "framework/global/internal/baseapplication.h"
+
 using namespace muse::uicomponents;
 
 ItemMultiSelectionModel::ItemMultiSelectionModel(QAbstractItemModel* parent)
@@ -59,8 +61,12 @@ QList<int> ItemMultiSelectionModel::selectedRows() const
 
 void ItemMultiSelectionModel::select(const QModelIndex& index)
 {
+#if defined(Q_OS_IOS)
+    Qt::KeyboardModifiers modifiers = BaseApplication::baseApplication()->keyboardModifiers();
+#else
     Qt::KeyboardModifiers modifiers = QGuiApplication::keyboardModifiers();
-
+#endif
+    
     //! NOTE: always treat simultaneously pressed Ctrl and Shift as Ctrl
     if (modifiers.testFlag(Qt::ShiftModifier) && modifiers.testFlag(Qt::ControlModifier)) {
         modifiers = Qt::ControlModifier;

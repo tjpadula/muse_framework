@@ -48,6 +48,7 @@ public:
     static Version appFullVersion();
     static String appBuild();
     static String appRevision();
+    static BaseApplication* baseApplication();
 
     String name() const override { return appName(); }
     String title() const override { return appTitle(); }
@@ -82,6 +83,11 @@ public:
     bool notify(QObject* object, QEvent* event) override;
 
     Qt::KeyboardModifiers keyboardModifiers() const override;
+    Qt::KeyboardModifiers queryKeyboardModifiers() const;
+#if defined(Q_OS_IOS)
+    void setKeyboardModifier(Qt::KeyboardModifiers inModifiers);
+    void clearKeyboardModifier(Qt::KeyboardModifiers inModifiers);
+#endif
 #endif
 
 protected:

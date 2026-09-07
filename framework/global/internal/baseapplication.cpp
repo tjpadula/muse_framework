@@ -43,6 +43,9 @@
 
 using namespace muse;
 
+static BaseApplication* gBaseApplication = nullptr;
+static Qt::KeyboardModifiers gIOSModifiers = Qt::KeyboardModifier::NoModifier;
+
 String BaseApplication::appName()
 {
 #ifdef MUSE_APP_NAME_MACHINE_READABLE
@@ -120,9 +123,15 @@ String BaseApplication::appRevision()
 #endif
 }
 
+BaseApplication* BaseApplication::baseApplication()
+{
+    return gBaseApplication;
+}
+
 BaseApplication::BaseApplication(const std::shared_ptr<CmdOptions>& appOptions)
     : m_appOptions(appOptions)
 {
+    gBaseApplication = this;
 }
 
 void BaseApplication::setRunMode(const RunMode& mode)
@@ -408,8 +417,33 @@ bool BaseApplication::notify(QObject* object, QEvent* event)
 
 Qt::KeyboardModifiers BaseApplication::keyboardModifiers() const
 {
+#if defined(Q_OS_IOS)
+    return gIOSModifiers;
+#else
     return QApplication::keyboardModifiers();
+#endif
 }
+
+Qt::KeyboardModifiers BaseApplication::queryKeyboardModifiers() const
+{
+#if defined(Q_OS_IOS)
+    return gIOSModifiers;
+#else
+    return QApplication::queryKeyboardModifiers();
+#endif
+}
+
+#if defined(Q_OS_IOS)
+void BaseApplication::setKeyboardModifier(Qt::KeyboardModifiers inModifiers)
+{
+    gIOSModifiers |= inModifiers;
+}
+
+void BaseApplication::clearKeyboardModifier(Qt::KeyboardModifiers inModifiers)
+{
+    gIOSModifiers &= ~inModifiers;
+}
+#endif
 
 #endif
 

@@ -29,6 +29,7 @@
 #include <QFontDatabase>
 #include <QTimer>
 
+#include "framework/global/internal/baseapplication.h"
 #include "global/types/color.h"
 #include "graphicsapiprovider.h"
 
@@ -165,7 +166,11 @@ QmlToolTip* UiEngine::tooltip() const
 
 Qt::KeyboardModifiers UiEngine::keyboardModifiers() const
 {
+#if defined(Q_OS_IOS)
+    return BaseApplication::baseApplication()->keyboardModifiers();
+#else
     return QGuiApplication::keyboardModifiers();
+#endif
 }
 
 Qt::LayoutDirection UiEngine::currentLanguageLayoutDirection() const

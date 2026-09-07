@@ -15,6 +15,10 @@
 #ifdef __cplusplus
 #include <QKeyEvent>
 #include <QtCore/qnamespace.h>
+#include "framework/actions/actiontypes.h"
+#include "engraving/dom/score.h"
+#include "framework/global/internal/baseapplication.h"
+#include "framework/global/stringutils.h"
 #include "log.h"
 #endif
 
@@ -61,6 +65,98 @@ UIWindow* keyUIWindow (void) {
 #ifdef __cplusplus
 using namespace muse::ui;
 using namespace Qt;
+
+IOSEventTrampoline* IOSEventTrampoline::sSharedTrampoline = nullptr;
+
+IOSEventTrampoline* _Nonnull IOSEventTrampoline::sharedTrampoline()
+{
+    if (!IOSEventTrampoline::sSharedTrampoline) {
+        IOSEventTrampoline::sSharedTrampoline = new IOSEventTrampoline();
+    }
+    
+    return IOSEventTrampoline::sSharedTrampoline;
+}
+
+IOSEventTrampoline::IOSEventTrampoline()
+    : muse::Contextable(muse::iocCtxForQmlObject(this))
+{
+}
+
+void IOSEventTrampoline::setMetaKeyState(const QString& metaKeyName, bool state)
+{
+    // The others are nav-right, nav-left, nav-up, and nav-down.
+#if defined(Q_OS_IOS)
+    LOGI() << "NotationStatusBarModel::setMetaKeyState key: " << metaKeyName << ", state: " << (state ? "pressed" : "released") << "\n";
+    // Create a QKeyEvent and bounce it off our trampoline into Objective-C land.
+    QEvent::Type anEventType = state ? QActionEvent::KeyPress : QActionEvent::KeyRelease;
+    int aKey = 0;
+    Qt::KeyboardModifiers aModifiers = Qt::NoModifier;
+    if (metaKeyName.compare ("shift") == 0) {
+        aKey = mu::engraving::Key_Shift;
+        aModifiers = Qt::ShiftModifier;
+    }
+    if (metaKeyName.compare ("command") == 0) {     // control and command are swapped on Mac/iOS
+        aKey = mu::engraving::Key_Control;
+        aModifiers = Qt::ControlModifier;
+    }
+    if (metaKeyName.compare ("option") == 0) {
+        aKey = Qt::Key_Alt;
+        aModifiers = Qt::AltModifier;
+    }
+    if (metaKeyName.compare ("control") == 0) {     // control and command are swapped on Mac/iOS
+        aKey = Qt::Key_Meta;
+        aModifiers = Qt::MetaModifier;
+    }
+    if (aModifiers != Qt::NoModifier) {
+        // Should this be Qt:NoModifier, so the key event generates the right thing?
+        QKeyEvent* aKeyEvent = new QKeyEvent(anEventType, aKey, Qt::NoModifier /*aModifiers*/);
+        //        IOSEventTrampoline::sendQKeyEvent(aKeyEvent);
+        //        qGuiApp->notify(qGuiApp->allWindows().first(), aKeyEvent);
+        if (anEventType == QActionEvent::KeyPress) {
+            BaseApplication::baseApplication()->setKeyboardModifier(aModifiers);
+        } else {
+            BaseApplication::baseApplication()->clearKeyboardModifier(aModifiers);
+        }
+        LOGI() << "NotationStatusBarModel::setMetaKeyState set base application modifiers: " << aModifiers << "\n";
+        return;
+    }
+    
+    if (metaKeyName.compare ("delete") == 0) {
+        IOSEventTrampoline::dispatch ("action://delete");
+        return;
+    }
+    
+    if (metaKeyName.compare ("escape") == 0) {
+        IOSEventTrampoline::dispatch ("action://cancel");
+        return;
+    }
+    
+    // We were given something other than a modifier key, so let's see if
+    // we know about it. We don't actually have anything that sends a single
+    // char (yet).
+    if (metaKeyName.length() == 1) {
+        // It's a simple character key. We'll convert it from a plain unicode
+        // (ASCII) char so we can use that as the key.
+        aKey = (int)(metaKeyName.at(0).unicode());
+        QKeyEvent* aKeyEvent = new QKeyEvent(anEventType, aKey, aModifiers, metaKeyName);
+        IOSEventTrampoline::sendQKeyEvent(aKeyEvent);
+        return;
+    }
+    
+    LOGI() << "NotationStatusBarModel::setMetaKeyState did not recognize key: " << metaKeyName << ", state: " << (state ? "pressed" : "released") << "\n";
+#endif
+    
+}
+
+void IOSEventTrampoline::dispatch(const std::string& command, const muse::actions::ActionData& args)
+{
+    if (muse::strings::startsWith(command, "command://")) {
+        DO_ASSERT(args.empty());
+        commandDispatcher()->dispatch(rcommand::Command(command));
+    } else {
+        dispatcher()->dispatch(command, args);
+    }
+}
 
 void IOSEventTrampoline::sendQKeyEvent(QKeyEvent* _Nonnull inKeyEvent)
 {

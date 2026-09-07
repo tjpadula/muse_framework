@@ -11,13 +11,35 @@
 #define IOSEventTrampoline_h
 
 class QKeyEvent;
+class QObject;
+class QString;
+class ActionData;
+
+#include "actions/iactionsdispatcher.h"
+//#include "framework/actions/actiontypes.h"
+#include "modularity/ioc.h"
+#include "rcommand/icommanddispatcher.h"
 
 namespace muse::ui {
 
-class IOSEventTrampoline
+class IOSEventTrampoline : public QObject, public kors::modularity::Contextable
 {
 public:
-    static void sendQKeyEvent(QKeyEvent* _Nonnull inEvent);
+    
+    static  IOSEventTrampoline* _Nonnull sharedTrampoline();
+    
+    muse::ContextInject<rcommand::ICommandDispatcher> commandDispatcher = { this };
+    muse::ContextInject<muse::actions::IActionsDispatcher> dispatcher = { this };
+
+    void setMetaKeyState(const QString& metaKeyName, bool state);
+
+    void sendQKeyEvent(QKeyEvent* _Nonnull inEvent);
+private:
+    void dispatch(const std::string& command, const muse::actions::ActionData& args = muse::actions::ActionData());
+    
+    IOSEventTrampoline();
+    
+    static IOSEventTrampoline* _Nullable sSharedTrampoline;
 };
 
 }
