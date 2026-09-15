@@ -106,7 +106,7 @@ void PopupView::initCloseController()
 #endif
 
     m_closeController->closeNotification().onNotify(this, [this]() {
-        close(true);
+        close();
     });
 }
 

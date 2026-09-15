@@ -38,5 +38,6 @@ public:
 
     bool isReleaseDownloaded() const override;
     muse::io::path_t downloadedReleasePath() const override;
+    void removeDownloadedRelease() override;
 };
 }
