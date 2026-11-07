@@ -94,6 +94,7 @@ public:
         bool accent = false;
         bool leftSide = false;
         ButtonRole role = ButtonRole::CustomRole;
+        int icon = 0; // ui::IconCode::Code, 0 = no icon
 
         ButtonData(int btn, const std::string& text)
             : btn(btn), text(text) {}
@@ -221,6 +222,8 @@ public:
                                              const int options = 0) = 0;
     virtual io::paths_t selectOpeningFilesSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
                                                const int options = 0) = 0;
+    virtual async::Promise<io::path_t> selectSavingFile(const std::string& title, const io::path_t& path,
+                                                        const std::vector<std::string>& filter, bool confirmOverwrite = true) = 0;
     virtual io::path_t selectSavingFileSync(const std::string& title, const io::path_t& path, const std::vector<std::string>& filter,
                                             bool confirmOverwrite = true) = 0;
 
@@ -247,6 +250,7 @@ public:
     virtual async::Promise<Ret> close(const UriQuery& uri) = 0;
     virtual async::Promise<Ret> close(const Uri& uri) = 0;
     virtual Ret closeSync(const UriQuery& uri) = 0;
+    virtual async::Promise<Ret> closeAllDialogs() = 0;
     virtual Ret closeAllDialogsSync() = 0;
 
     // state

@@ -27,13 +27,14 @@
 #include "ifontsengine.h"
 
 #include "global/modularity/ioc.h"
+#include "global/async/asyncable.h"
 #include "ifontsdatabase.h"
 
 #include "fontrendercache.h"
 
 namespace muse::draw {
 class IFontFace;
-class FontsEngine : public IFontsEngine, public Contextable
+class FontsEngine : public IFontsEngine, public Contextable, public async::Asyncable
 {
     GlobalInject<IFontsDatabase> fontsDatabase;
 
@@ -96,7 +97,7 @@ private:
         double pixelScaleFor(const IFontFace* loadedFace) const;
     };
 
-    IFontFace* createFontFace(const FontDataKey& dataKey, Font::Type type) const;
+    IFontFace* createFontFace(const FontData& fontData, Font::Type type) const;
     RequireFace* fontFace(const Font& f, bool isSymbolMode = false) const;
     IFontFace* fontFaceByActualDataKey(const FontDataKey& actualDataKey, Font::Type type, int loadedPixelSize, bool isSymbolMode) const;
     IFontFace* sdfFontFaceFor(const IFontFace* layoutFace) const;

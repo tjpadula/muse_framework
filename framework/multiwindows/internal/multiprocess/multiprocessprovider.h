@@ -31,7 +31,7 @@
 #include "ipc/ipclock.h"
 
 #include "modularity/ioc.h"
-#include "actions/iactionsdispatcher.h"
+#include "rcommand/icommanddispatcher.h"
 #include "async/asyncable.h"
 #include "async/notification.h"
 #include "interactive/iinteractive.h"
@@ -41,7 +41,7 @@
 namespace muse::mi {
 class MultiProcessProvider : public IMultiWindowsProvider, public IMultiProcessProvider, public Contextable, public async::Asyncable
 {
-    ContextInject<muse::actions::IActionsDispatcher> dispatcher = { this };
+    ContextInject<rcommand::ICommandDispatcher> commandDispatcher = { this };
     ContextInject<IInteractive> interactive = { this };
     ContextInject<muse::ui::IMainWindow> mainWindow = { this };
 
@@ -86,7 +86,7 @@ public:
 
     // Quit for all
     void notifyAboutWindowWasQuited() override;
-    void quitForAll() override;
+    async::Promise<Ret> quitForAll(const modularity::ContextPtr& ctx) override;
     void quitWindow(const modularity::ContextPtr& ctx) override;
     void quitAllAndRestartLast() override;
     void quitAllAndRunInstallation(const io::path_t& installerPath) override;

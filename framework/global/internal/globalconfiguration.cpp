@@ -202,6 +202,12 @@ io::path_t GlobalConfiguration::downloadsPath() const
     return p;
 }
 
+io::path_t GlobalConfiguration::documentsPath() const
+{
+    static io::path_t p = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    return p;
+}
+
 io::path_t GlobalConfiguration::genericDataPath() const
 {
 #if defined(Q_OS_IOS)

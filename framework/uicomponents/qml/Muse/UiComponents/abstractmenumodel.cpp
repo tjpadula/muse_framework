@@ -28,7 +28,9 @@
 
 using namespace muse::uicomponents;
 using namespace muse::ui;
+#ifdef MUSE_MODULE_ACTIONS_SUPPORT
 using namespace muse::actions;
+#endif
 
 const int AbstractMenuModel::INVALID_ITEM_INDEX = -1;
 
@@ -79,39 +81,56 @@ void AbstractMenuModel::handleMenuItem(const QString& itemId)
     MenuItem& menuItem = findItem(itemId);
 
     std::string intent = menuItem.intent();
-    UriQuery query(intent);
-    if (query.isValid()) {
-        dispatch(query);
-    } else {
-        dispatch(intent, menuItem.args());
-    }
-}
-
-void AbstractMenuModel::dispatch(const std::string& command, const ActionData& args)
-{
-    if (muse::strings::startsWith(command, "command://")) {
-        DO_ASSERT(args.empty());
-        commandDispatcher()->dispatch(rcommand::Command(command));
+    if (muse::strings::startsWith(intent, "command://")) {
+        auto params = menuItem.params();
+        if (params.empty()) {
+            dispatchCommand(rcommand::CommandQuery(intent));
+        } else {
+            dispatchCommand(rcommand::Command(intent), params);
+        }
     } else {
 #ifdef MUSE_MODULE_ACTIONS_SUPPORT
-        dispatcher()->dispatch(command, args);
+        UriQuery query(intent);
+        if (query.isValid()) {
+            dispatchAction(query);
+        } else {
+            dispatchAction(actions::ActionCode(intent), menuItem.args());
+        }
 #else
         UNREACHABLE;
 #endif
     }
 }
 
-void AbstractMenuModel::dispatch(const UriQuery& query)
-{
-    if (query.uri().scheme() == "command") {
-        commandDispatcher()->dispatch(query);
-    } else {
 #ifdef MUSE_MODULE_ACTIONS_SUPPORT
-        dispatcher()->dispatch(query);
-#else
-        UNREACHABLE;
-#endif
+void AbstractMenuModel::dispatchAction(const muse::actions::ActionCode& code, const muse::actions::ActionData& args)
+{
+    IF_ASSERT_FAILED(!muse::strings::startsWith(code, "command://")) {
+        dispatchCommand(rcommand::Command(code));
+        return;
     }
+    dispatcher()->dispatch(code, args);
+}
+
+void AbstractMenuModel::dispatchAction(const muse::UriQuery& query)
+{
+    IF_ASSERT_FAILED(!muse::strings::startsWith(query.uri().scheme(), "command")) {
+        dispatchCommand(rcommand::CommandQuery(query));
+        return;
+    }
+    dispatcher()->dispatch(query);
+}
+
+#endif
+
+void AbstractMenuModel::dispatchCommand(const muse::rcommand::Command& command, const muse::rcommand::Params& params)
+{
+    commandDispatcher()->dispatch(command, params);
+}
+
+void AbstractMenuModel::dispatchCommand(const muse::rcommand::CommandQuery& query)
+{
+    commandDispatcher()->dispatch(query);
 }
 
 QVariantMap AbstractMenuModel::get(int index)
@@ -257,28 +276,36 @@ MenuItem* AbstractMenuModel::makeMenu(const TranslatableString& title, const Men
     return item;
 }
 
-MenuItem* AbstractMenuModel::makeMenuItem(const rcommand::Command& command, const TranslatableString& title)
+MenuItem* AbstractMenuModel::makeMenuItem(const muse::rcommand::Command& command,
+                                          const muse::rcommand::Params& params,
+                                          const TranslatableString& title)
 {
-    return makeMenuItem(rcommand::CommandQuery(command), title);
-}
-
-MenuItem* AbstractMenuModel::makeMenuItem(const rcommand::CommandQuery& query, const TranslatableString& title)
-{
-    const rcommand::CommandInfo& info = commandsRegister()->commandInfo(query.uri());
+    const rcommand::CommandInfo& info = commandsRegister()->commandInfo(command);
     if (!info.isValid()) {
-        LOGW() << "not found command: " << query.uri().toString();
+        LOGW() << "not found command: " << command.toString();
         return nullptr;
     }
 
     MenuItem* item = new MenuItem(info, this);
-    item->setCommandQuery(query);
-    item->setCommandState(commandsState()->commandState(query.uri()));
+    item->setCommand(command);
+    item->setParams(params);
+    item->setCommandState(commandsState()->commandState(command));
 
     if (!title.isEmpty()) {
         item->setTitle(title);
     }
 
     return item;
+}
+
+MenuItem* AbstractMenuModel::makeMenuItem(const rcommand::Command& command, const TranslatableString& title)
+{
+    return makeMenuItem(command, {}, title);
+}
+
+MenuItem* AbstractMenuModel::makeMenuItem(const rcommand::CommandQuery& query, const TranslatableString& title)
+{
+    return makeMenuItem(rcommand::Command(query.uri()), query.params(), title);
 }
 
 #ifdef MUSE_MODULE_ACTIONS_SUPPORT
@@ -334,9 +361,15 @@ void AbstractMenuModel::subscribeOnChanges()
     });
 #endif
 
+#ifdef MUSE_MODULE_SHORTCUTS_V2
+    commandShortcutsRegister()->shortcutsChanged().onNotify(this, [this]() {
+        updateShortcutsAll();
+    });
+#else
     shortcutsRegister()->shortcutsChanged().onNotify(this, [this]() {
         updateShortcutsAll();
     });
+#endif
 
     m_subscribedOnChanges = true;
 }
@@ -528,7 +561,13 @@ void AbstractMenuModel::updateShortcutsAll()
 
 void AbstractMenuModel::updateShortcuts(MenuItem* item)
 {
-    std::vector<std::string> shortcuts = shortcutsRegister()->shortcut(item->actionCode()).sequences;
+    std::vector<std::string> shortcuts;
+
+#ifdef MUSE_MODULE_SHORTCUTS_V2
+    shortcuts = commandShortcutsRegister()->shortcut(item->command()).sequences;
+#else
+    shortcuts = shortcutsRegister()->shortcut(item->actionCode()).sequences;
+#endif
     item->setShortcuts(shortcuts);
 
     for (MenuItem* subItem : item->subitems()) {

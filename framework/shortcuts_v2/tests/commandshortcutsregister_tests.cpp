@@ -35,14 +35,17 @@
 
 #include "mocks/shortcutsconfigurationmock.h"
 #include "multiwindows/tests/mocks/multiwindowsprovidermock.h"
+#include "rcommand/tests/mocks/commandsregistermock.h"
 
 using ::testing::_;
 using ::testing::Invoke;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::ReturnRef;
 
 using namespace muse;
 using namespace muse::shortcuts;
+using namespace muse::rcommand;
 
 namespace muse::shortcuts {
 class Shortcuts_CommandShortcutsRegisterTests : public ::testing::Test, public async::Asyncable
@@ -56,9 +59,15 @@ public:
 
         m_configuration = std::make_shared<NiceMock<ShortcutsConfigurationMock> >();
         m_multiWindowsProvider = std::make_shared<NiceMock<mi::MultiWindowsProviderMock> >();
+        m_commandsRegister = std::make_shared<NiceMock<CommandsRegisterMock> >();
 
         modularity::globalIoc()->registerExport<IShortcutsConfiguration>("utests", m_configuration);
         modularity::globalIoc()->registerExport<mi::IMultiWindowsProvider>("utests", m_multiWindowsProvider);
+        modularity::globalIoc()->registerExport<ICommandsRegister>("utests", m_commandsRegister);
+
+        //! NOTE Every command is available for shortcuts by default
+        ON_CALL(*m_commandsRegister, commandInfo(_))
+        .WillByDefault(ReturnRef(m_commandInfo));
 
         ON_CALL(*m_configuration, defaultShortcutsName())
         .WillByDefault(Return("shortcuts"));
@@ -94,6 +103,7 @@ public:
 
         modularity::globalIoc()->unregister<IShortcutsConfiguration>("utests");
         modularity::globalIoc()->unregister<mi::IMultiWindowsProvider>("utests");
+        modularity::globalIoc()->unregister<ICommandsRegister>("utests");
     }
 
     void initRegister()
@@ -120,7 +130,7 @@ public:
         m_presetNameChanged.send(name);
     }
 
-    static const Shortcut* findShortcut(const ShortcutList& list, const std::string& command)
+    static const Shortcut* findShortcut(const ShortcutList& list, const Command& command)
     {
         auto it = std::find_if(list.begin(), list.end(), [&command](const Shortcut& sc) {
             return sc.command == command;
@@ -144,6 +154,8 @@ protected:
 
     std::shared_ptr<NiceMock<ShortcutsConfigurationMock> > m_configuration;
     std::shared_ptr<NiceMock<mi::MultiWindowsProviderMock> > m_multiWindowsProvider;
+    std::shared_ptr<NiceMock<CommandsRegisterMock> > m_commandsRegister;
+    CommandInfo m_commandInfo;
 
     std::unique_ptr<CommandShortcutsRegister> m_register;
 };
@@ -159,12 +171,12 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, LoadsDefaultShortcuts)
     const ShortcutList& shortcuts = m_register->shortcuts();
     EXPECT_EQ(shortcuts.size(), 4u);
 
-    const Shortcut* a = findShortcut(shortcuts, "test://a");
+    const Shortcut* a = findShortcut(shortcuts, Command("test://a"));
     ASSERT_NE(a, nullptr);
     EXPECT_EQ(a->sequences, seqs({ "Ctrl+A" }));
     EXPECT_EQ(a->scope, "TEST");
 
-    const Shortcut* d = findShortcut(shortcuts, "test://d");
+    const Shortcut* d = findShortcut(shortcuts, Command("test://d"));
     ASSERT_NE(d, nullptr);
     EXPECT_EQ(d->scope, "OTHER");
 }
@@ -182,11 +194,11 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, AppliesPlatformDiff)
     const ShortcutList& shortcuts = m_register->shortcuts();
     EXPECT_EQ(shortcuts.size(), 4u);
 
-    const Shortcut* b = findShortcut(shortcuts, "test://b");
+    const Shortcut* b = findShortcut(shortcuts, Command("test://b"));
     ASSERT_NE(b, nullptr);
     EXPECT_EQ(b->sequences, seqs({ "Alt+B" }));
 
-    const Shortcut* a = findShortcut(shortcuts, "test://a");
+    const Shortcut* a = findShortcut(shortcuts, Command("test://a"));
     ASSERT_NE(a, nullptr);
     EXPECT_EQ(a->sequences, seqs({ "Ctrl+A" }));
 }
@@ -203,11 +215,11 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, AppliesPresetDiff)
     const ShortcutList& shortcuts = m_register->shortcuts();
     EXPECT_EQ(shortcuts.size(), 4u);
 
-    const Shortcut* c = findShortcut(shortcuts, "test://c");
+    const Shortcut* c = findShortcut(shortcuts, Command("test://c"));
     ASSERT_NE(c, nullptr);
     EXPECT_EQ(c->sequences, seqs({ "&", "Num+1" }));
 
-    const Shortcut* b = findShortcut(shortcuts, "test://b");
+    const Shortcut* b = findShortcut(shortcuts, Command("test://b"));
     ASSERT_NE(b, nullptr);
     EXPECT_EQ(b->sequences, seqs({ "Ctrl+B" }));
 }
@@ -226,11 +238,11 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, AppliesPresetDiffOverPlatformDif
     //! [THEN] Both diffs are applied
     const ShortcutList& shortcuts = m_register->shortcuts();
 
-    const Shortcut* b = findShortcut(shortcuts, "test://b");
+    const Shortcut* b = findShortcut(shortcuts, Command("test://b"));
     ASSERT_NE(b, nullptr);
     EXPECT_EQ(b->sequences, seqs({ "Alt+B" }));
 
-    const Shortcut* c = findShortcut(shortcuts, "test://c");
+    const Shortcut* c = findShortcut(shortcuts, Command("test://c"));
     ASSERT_NE(c, nullptr);
     EXPECT_EQ(c->sequences, seqs({ "&", "Num+1" }));
 }
@@ -238,7 +250,7 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, AppliesPresetDiffOverPlatformDif
 TEST_F(Shortcuts_CommandShortcutsRegisterTests, AppliesUserDiff)
 {
     //! [GIVEN] A user diff file for the default shortcuts
-    writeUserFile("shortcuts", R"({ "TEST": [ { "command": "test://a", "sequences": ["X"] } ] })");
+    writeUserFile("shortcuts", R"([ { "scope": "TEST", "shortcuts": [ { "command": "test://a", "sequences": ["X"] } ] } ])");
 
     //! [WHEN] The register is initialized
     initRegister();
@@ -247,11 +259,11 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, AppliesUserDiff)
     const ShortcutList& shortcuts = m_register->shortcuts();
     EXPECT_EQ(shortcuts.size(), 4u);
 
-    const Shortcut* a = findShortcut(shortcuts, "test://a");
+    const Shortcut* a = findShortcut(shortcuts, Command("test://a"));
     ASSERT_NE(a, nullptr);
     EXPECT_EQ(a->sequences, seqs({ "X" }));
 
-    const Shortcut* b = findShortcut(shortcuts, "test://b");
+    const Shortcut* b = findShortcut(shortcuts, Command("test://b"));
     ASSERT_NE(b, nullptr);
     EXPECT_EQ(b->sequences, seqs({ "Ctrl+B" }));
 }
@@ -259,14 +271,14 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, AppliesUserDiff)
 TEST_F(Shortcuts_CommandShortcutsRegisterTests, UserDiffIsPerPreset)
 {
     //! [GIVEN] A user diff file for the default shortcuts, but the azerty preset is selected
-    writeUserFile("shortcuts", R"({ "TEST": [ { "command": "test://a", "sequences": ["X"] } ] })");
+    writeUserFile("shortcuts", R"([ { "scope": "TEST", "shortcuts": [ { "command": "test://a", "sequences": ["X"] } ] } ])");
     m_currentPresetName = "shortcuts_azerty";
 
     //! [WHEN] The register is initialized
     initRegister();
 
     //! [THEN] The default user diff is not applied
-    const Shortcut* a = findShortcut(m_register->shortcuts(), "test://a");
+    const Shortcut* a = findShortcut(m_register->shortcuts(), Command("test://a"));
     ASSERT_NE(a, nullptr);
     EXPECT_EQ(a->sequences, seqs({ "Ctrl+A" }));
 }
@@ -279,21 +291,24 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, SetShortcutsWritesOnlyDiff)
     //! [WHEN] One shortcut is modified
     ShortcutList modified = m_register->shortcuts();
     for (Shortcut& sc : modified) {
-        if (sc.command == "test://a") {
+        if (sc.command == Command("test://a")) {
             sc.sequences = seqs({ "Y" });
         }
     }
 
-    ASSERT_TRUE(m_register->setShortcuts(modified));
+    ASSERT_TRUE(m_register->updateShortcuts(modified));
 
     //! [THEN] The user file contains only the modified shortcut
     ByteArray data;
     ASSERT_TRUE(io::File::readFile(userPath("shortcuts"), data));
 
-    JsonObject root = JsonDocument::fromJson(data).rootObject();
-    EXPECT_EQ(root.keys().size(), 1u);
+    JsonArray root = JsonDocument::fromJson(data).rootArray();
+    ASSERT_EQ(root.size(), 1u);
 
-    JsonArray scopeArr = root.value("TEST").toArray();
+    JsonObject scopeObj = root.at(0).toObject();
+    EXPECT_EQ(scopeObj.value("scope").toStdString(), "TEST");
+
+    JsonArray scopeArr = scopeObj.value("shortcuts").toArray();
     ASSERT_EQ(scopeArr.size(), 1u);
     EXPECT_EQ(scopeArr.at(0).toObject().value("command").toString().toStdString(), "test://a");
 
@@ -303,11 +318,11 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, SetShortcutsWritesOnlyDiff)
     const ShortcutList& shortcuts = m_register->shortcuts();
     EXPECT_EQ(shortcuts.size(), 4u);
 
-    const Shortcut* a = findShortcut(shortcuts, "test://a");
+    const Shortcut* a = findShortcut(shortcuts, Command("test://a"));
     ASSERT_NE(a, nullptr);
     EXPECT_EQ(a->sequences, seqs({ "Y" }));
 
-    const Shortcut* b = findShortcut(shortcuts, "test://b");
+    const Shortcut* b = findShortcut(shortcuts, Command("test://b"));
     ASSERT_NE(b, nullptr);
     EXPECT_EQ(b->sequences, seqs({ "Ctrl+B" }));
 }
@@ -321,16 +336,16 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, RevertingAllChangesRemovesUserFi
 
     ShortcutList modified = defaultShortcuts;
     for (Shortcut& sc : modified) {
-        if (sc.command == "test://a") {
+        if (sc.command == Command("test://a")) {
             sc.sequences = seqs({ "Y" });
         }
     }
 
-    ASSERT_TRUE(m_register->setShortcuts(modified));
+    ASSERT_TRUE(m_register->updateShortcuts(modified));
     ASSERT_TRUE(io::File::exists(userPath("shortcuts")));
 
     //! [WHEN] The shortcut is reverted back to the default value
-    ASSERT_TRUE(m_register->setShortcuts(defaultShortcuts));
+    ASSERT_TRUE(m_register->updateShortcuts(defaultShortcuts));
 
     //! [THEN] The user file is removed
     EXPECT_FALSE(io::File::exists(userPath("shortcuts")));
@@ -345,17 +360,17 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, ClearedShortcutIsSaved)
     //! [WHEN] One shortcut is cleared
     ShortcutList modified = m_register->shortcuts();
     for (Shortcut& sc : modified) {
-        if (sc.command == "test://a") {
+        if (sc.command == Command("test://a")) {
             sc.sequences = {};
         }
     }
 
-    ASSERT_TRUE(m_register->setShortcuts(modified));
+    ASSERT_TRUE(m_register->updateShortcuts(modified));
 
     //! [THEN] The explicit clear survives reload
     m_register->reload();
 
-    const Shortcut* a = findShortcut(m_register->shortcuts(), "test://a");
+    const Shortcut* a = findShortcut(m_register->shortcuts(), Command("test://a"));
     ASSERT_NE(a, nullptr);
     EXPECT_TRUE(a->sequences.empty());
 }
@@ -367,7 +382,7 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, ResetShortcutsRemovesUserFile)
 
     ShortcutList modified = m_register->shortcuts();
     modified.front().sequences = seqs({ "Y" });
-    ASSERT_TRUE(m_register->setShortcuts(modified));
+    ASSERT_TRUE(m_register->updateShortcuts(modified));
     ASSERT_TRUE(io::File::exists(userPath("shortcuts")));
 
     //! [WHEN] The shortcuts are reset
@@ -376,7 +391,7 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, ResetShortcutsRemovesUserFile)
     //! [THEN] The user file is removed and the defaults are restored
     EXPECT_FALSE(io::File::exists(userPath("shortcuts")));
 
-    const Shortcut* a = findShortcut(m_register->shortcuts(), "test://a");
+    const Shortcut* a = findShortcut(m_register->shortcuts(), Command("test://a"));
     ASSERT_NE(a, nullptr);
     EXPECT_EQ(a->sequences, seqs({ "Ctrl+A" }));
 }
@@ -397,7 +412,7 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, PresetChangeReloadsShortcuts)
     //! [THEN] The register is reloaded with the preset diff applied
     EXPECT_TRUE(changedNotified);
 
-    const Shortcut* c = findShortcut(m_register->shortcuts(), "test://c");
+    const Shortcut* c = findShortcut(m_register->shortcuts(), Command("test://c"));
     ASSERT_NE(c, nullptr);
     EXPECT_EQ(c->sequences, seqs({ "&", "Num+1" }));
 
@@ -405,7 +420,7 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, PresetChangeReloadsShortcuts)
     changeCurrentPreset("");
 
     //! [THEN] The defaults are restored
-    c = findShortcut(m_register->shortcuts(), "test://c");
+    c = findShortcut(m_register->shortcuts(), Command("test://c"));
     ASSERT_NE(c, nullptr);
     EXPECT_EQ(c->sequences, seqs({ "1", "Num+1" }));
 }
@@ -419,12 +434,12 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, UserDiffIsWrittenForActivePreset
     //! [WHEN] One shortcut is modified
     ShortcutList modified = m_register->shortcuts();
     for (Shortcut& sc : modified) {
-        if (sc.command == "test://b") {
+        if (sc.command == Command("test://b")) {
             sc.sequences = seqs({ "Z" });
         }
     }
 
-    ASSERT_TRUE(m_register->setShortcuts(modified));
+    ASSERT_TRUE(m_register->updateShortcuts(modified));
 
     //! [THEN] The user diff is written for the preset, not for the default shortcuts
     EXPECT_TRUE(io::File::exists(userPath("shortcuts_azerty")));
@@ -432,12 +447,12 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, UserDiffIsWrittenForActivePreset
 
     //! [THEN] After switching to the default shortcuts and back, the modification is restored
     changeCurrentPreset("");
-    const Shortcut* b = findShortcut(m_register->shortcuts(), "test://b");
+    const Shortcut* b = findShortcut(m_register->shortcuts(), Command("test://b"));
     ASSERT_NE(b, nullptr);
     EXPECT_EQ(b->sequences, seqs({ "Ctrl+B" }));
 
     changeCurrentPreset("shortcuts_azerty");
-    b = findShortcut(m_register->shortcuts(), "test://b");
+    b = findShortcut(m_register->shortcuts(), Command("test://b"));
     ASSERT_NE(b, nullptr);
     EXPECT_EQ(b->sequences, seqs({ "Z" }));
 }
@@ -451,7 +466,7 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, IsPresetEditedReflectsUserFile)
     //! [WHEN] One shortcut is modified
     ShortcutList modified = m_register->shortcuts();
     modified.front().sequences = seqs({ "Y" });
-    ASSERT_TRUE(m_register->setShortcuts(modified));
+    ASSERT_TRUE(m_register->updateShortcuts(modified));
 
     //! [THEN] The active set is edited
     EXPECT_TRUE(m_register->isPresetEdited(""));
@@ -466,7 +481,7 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, IsPresetEditedReflectsUserFile)
 TEST_F(Shortcuts_CommandShortcutsRegisterTests, BuiltinPresetsCannotBeDeleted)
 {
     //! [GIVEN] The register and an edited builtin preset
-    writeUserFile("shortcuts_azerty", R"({ "TEST": [ { "command": "test://a", "sequences": ["X"] } ] })");
+    writeUserFile("shortcuts_azerty", R"([ { "scope": "TEST", "shortcuts": [ { "command": "test://a", "sequences": ["X"] } ] } ])");
     initRegister();
 
     //! [THEN] Neither the default set nor builtin presets can be deleted
@@ -483,7 +498,7 @@ TEST_F(Shortcuts_CommandShortcutsRegisterTests, BuiltinPresetsCannotBeDeleted)
 TEST_F(Shortcuts_CommandShortcutsRegisterTests, DeletePresetRemovesUserFileAndFallsBackToDefault)
 {
     //! [GIVEN] A custom preset (user file without a builtin twin) is selected
-    writeUserFile("my_preset", R"({ "TEST": [ { "command": "test://a", "sequences": ["X"] } ] })");
+    writeUserFile("my_preset", R"([ { "scope": "TEST", "shortcuts": [ { "command": "test://a", "sequences": ["X"] } ] } ])");
     m_currentPresetName = "my_preset";
     initRegister();
 

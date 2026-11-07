@@ -54,6 +54,46 @@ const QString muse::cloud::REFRESH_TOKEN_KEY("refresh_token");
 static const std::string CLOUD_ACCESS_TOKEN_RESOURCE_NAME("CLOUD_ACCESS_TOKEN");
 static const std::string STATUS_KEY("status");
 
+static Ret retFromStatus(int status, bool isAlreadyUploaded)
+{
+    Ret ret;
+
+    switch (status) {
+    case 400:
+        ret = make_ret(cloud::Err::Status400_InvalidRequest);
+        break;
+    case 401:
+        ret = make_ret(cloud::Err::Status401_AuthorizationRequired);
+        break;
+    case 403:
+        ret = make_ret(isAlreadyUploaded ? cloud::Err::Status403_AccountNotActivated : cloud::Err::Status403_NotOwner);
+        break;
+    case 404:
+        ret = make_ret(cloud::Err::Status404_NotFound);
+        break;
+    case 409:
+        ret = make_ret(cloud::Err::Status409_Conflict);
+        break;
+    case 422:
+        ret = make_ret(cloud::Err::Status422_ValidationFailed);
+        break;
+    case 429:
+        ret = make_ret(cloud::Err::Status429_RateLimitExceeded);
+        break;
+    case 500:
+        ret = make_ret(cloud::Err::Status500_InternalServerError);
+        break;
+    default:
+        ret = make_ret(cloud::Err::UnknownStatusCode);
+        ret.setText("Unknown status code: " + std::to_string(status));
+        break;
+    }
+
+    ret.setData(STATUS_KEY, status);
+
+    return ret;
+}
+
 AbstractCloudService::AbstractCloudService(const modularity::ContextPtr& iocCtx, QObject* parent)
     : QObject(parent), Contextable(iocCtx)
 {
@@ -98,12 +138,8 @@ void AbstractCloudService::initOAuthIfNecessary()
     m_replyHandler->setRedirectUrl(m_serverConfig.signInSuccessUrl);
 
     m_oauth2->setAuthorizationUrl(m_serverConfig.authorizationUrl);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
     m_oauth2->setTokenUrl(m_serverConfig.accessTokenUrl);
     m_oauth2->setPkceMethod(QOAuth2AuthorizationCodeFlow::PkceMethod::None);
-#else
-    m_oauth2->setAccessTokenUrl(m_serverConfig.accessTokenUrl);
-#endif
     m_oauth2->setModifyParametersFunction([this](QAbstractOAuth::Stage, QMultiMap<QString, QVariant>* parameters) {
         for (const QString& key : m_serverConfig.authorizationParameters.keys()) {
             parameters->replace(key, m_serverConfig.authorizationParameters.value(key));
@@ -115,16 +151,10 @@ void AbstractCloudService::initOAuthIfNecessary()
     connect(m_oauth2, &QOAuth2AuthorizationCodeFlow::authorizeWithBrowser, this, &AbstractCloudService::openUrl);
     connect(m_oauth2, &QOAuth2AuthorizationCodeFlow::granted, this, &AbstractCloudService::onUserAuthorized);
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
     connect(m_oauth2, &QOAuth2AuthorizationCodeFlow::serverReportedErrorOccurred,
             [](const QString& error, const QString& errorDescription, const QUrl& uri) {
         LOGE() << "Error during authorization: " << error << "\n Description: " << errorDescription << "\n URI: " << uri.toString();
     });
-#else
-    connect(m_oauth2, &QOAuth2AuthorizationCodeFlow::error, [](const QString& error, const QString& errorDescription, const QUrl& uri) {
-        LOGE() << "Error during authorization: " << error << "\n Description: " << errorDescription << "\n URI: " << uri.toString();
-    });
-#endif
 }
 
 bool AbstractCloudService::readTokens()
@@ -322,32 +352,31 @@ const AccountInfo& AbstractCloudService::accountInfo() const
     return m_accountInfo;
 }
 
-Ret AbstractCloudService::checkCloudIsAvailable() const
+Promise<Ret> AbstractCloudService::checkCloudIsAvailable() const
 {
-    RetVal<Progress> progress = m_networkManager->get(m_serverConfig.serverAvailabilityUrl, nullptr, m_serverConfig.headers);
-    if (!progress.ret) {
-        return progress.ret;
-    }
+    static constexpr int ANSWER_TIMEOUT_MS = 5000;
 
-    Ret ret = make_ok();
-    QEventLoop loop;
+    return async::make_promise<Ret>([this](auto resolve) {
+        RetVal<Progress> progress = m_networkManager->get(m_serverConfig.serverAvailabilityUrl, nullptr, m_serverConfig.headers);
+        if (!progress.ret) {
+            return resolve(progress.ret);
+        }
 
-    progress.val.finished().onReceive(this, [&ret, &loop](const ProgressResult& res) {
-        ret = res.ret;
-        loop.quit();
+        auto answered = std::make_shared<bool>(false);
+
+        progress.val.finished().onReceive(this, [answered, resolve](const ProgressResult& res) {
+            *answered = true;
+            (void)resolve(res.ret);
+        });
+
+        QTimer::singleShot(ANSWER_TIMEOUT_MS, [answered, progress]() mutable {
+            if (!*answered) {
+                progress.val.cancel();
+            }
+        });
+
+        return Promise<Ret>::dummy_result();
     });
-
-    QTimer timer;
-    timer.setSingleShot(true);
-    QObject::connect(&timer, &QTimer::timeout, [&progress]() {
-        progress.val.cancel();
-    });
-    timer.start(5000);
-
-    loop.exec();
-    timer.stop();
-
-    return ret;
 }
 
 void AbstractCloudService::setAccountInfo(const AccountInfo& info)
@@ -410,34 +439,14 @@ Ret AbstractCloudService::uploadingDownloadingRetFromRawRet(const Ret& rawRet, b
 
     int status = statusCode(rawRet);
     if (status) {
-        switch (status) {
-        case 400: return make_ret(Err::Status400_InvalidRequest);
-        case 401: return make_ret(Err::Status401_AuthorizationRequired);
-        case 403:
-            if (isAlreadyUploaded) {
-                return make_ret(Err::Status403_AccountNotActivated);
-            } else {
-                return make_ret(Err::Status403_NotOwner);
-            }
-        case 404: return make_ret(Err::Status404_NotFound);
-        case 409: return make_ret(Err::Status409_Conflict);
-        case 422: return make_ret(Err::Status422_ValidationFailed);
-        case 429: return make_ret(Err::Status429_RateLimitExceeded);
-        case 500: return make_ret(Err::Status500_InternalServerError);
-        default: break;
-        }
-
-        Ret ret = make_ret(Err::UnknownStatusCode);
-        ret.setText("Unknown status code: " + std::to_string(status));
-        ret.setData("status", status);
-        return ret;
+        return retFromStatus(status, isAlreadyUploaded);
     }
 
     switch (rawRet.code()) {
     case int(network::Err::NetworkError):
     case int(network::Err::Timeout):
     case int(network::Err::Abort):
-        return make_ret(Err::NetworkError);
+        return make_ret(cloud::Err::NetworkError);
     }
 
     return rawRet;

@@ -55,8 +55,6 @@ FocusScope {
      * @member {String}
      */
     property string text: ""
-    property int textFormat: Text.AutoText
-    property int maximumLineCount: 1
 
     //!NOTE: used to sort buttons inside a button box
     property int buttonId: 0
@@ -257,13 +255,14 @@ FocusScope {
             }
 
             StyledTextLabel {
+                id: verticalTextLabel
+
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter
+
                 text: root.text
                 font: root.textFont
-                textFormat: root.textFormat
                 wrapMode: Text.Wrap
-                maximumLineCount: root.maximumLineCount
                 visible: !isEmpty && root.buttonType != FlatButton.IconOnly
             }
         }
@@ -285,13 +284,14 @@ FocusScope {
             }
 
             StyledTextLabel {
+                id: horizontalTextLabel
+
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
+
                 text: root.text
                 font: root.textFont
-                textFormat: root.textFormat
                 wrapMode: Text.Wrap
-                maximumLineCount: root.maximumLineCount
                 visible: !isEmpty
             }
         }

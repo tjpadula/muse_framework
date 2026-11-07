@@ -105,7 +105,7 @@ void SortFilterProxyModel::setAlwaysIncludeIndices(const QList<int>& indices)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
     endFilterChange(QSortFilterProxyModel::Direction::Rows);
 #else
-    invalidateFilter();
+        invalidateFilter();
 #endif
 
     emit alwaysIncludeIndicesChanged();
@@ -127,7 +127,7 @@ void SortFilterProxyModel::setAlwaysExcludeIndices(const QList<int>& indices)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
     endFilterChange(QSortFilterProxyModel::Direction::Rows);
 #else
-    invalidateFilter();
+        invalidateFilter();
 #endif
 
     emit alwaysExcludeIndicesChanged();

@@ -23,8 +23,16 @@
 
 #include <QVariantMap>
 
+#include "global/containers.h"
+#include "global/stringutils.h"
 #include "types/translatablestring.h"
+
+#include "muse_framework_config.h"
+#ifdef MUSE_MODULE_SHORTCUTS_V2
+#include "shortcuts_v2/shortcutstypes.h"
+#else
 #include "shortcuts/shortcutstypes.h"
+#endif
 
 using namespace muse::uicomponents;
 using namespace muse::ui;
@@ -34,27 +42,10 @@ ToolBarItem::ToolBarItem(QObject* parent)
 {
 }
 
-ToolBarItem::ToolBarItem(const UiAction& action, ToolBarItemType::Type type, QObject* parent)
+ToolBarItem::ToolBarItem(ToolBarItemType::Type type, QObject* parent)
     : QObject(parent), Contextable(iocCtxForQmlObject(this))
 {
-    m_id = QString::fromStdString(action.code);
-    m_action = action;
     m_type = type;
-}
-
-void ToolBarItem::activate()
-{
-    dispatcher()->dispatch(action().code, args());
-}
-
-void ToolBarItem::handleMenuItem(const QString& menuId)
-{
-    for (const MenuItem* menuItem : m_menuItems) {
-        if (menuItem->id() == menuId) {
-            dispatcher()->dispatch(menuItem->actionCode(), menuItem->args());
-            return;
-        }
-    }
 }
 
 QString ToolBarItem::id() const
@@ -64,12 +55,49 @@ QString ToolBarItem::id() const
 
 QString ToolBarItem::translatedTitle() const
 {
-    return m_action.title.qTranslatedWithoutMnemonic();
+    return m_title.qTranslatedPlain();
 }
 
-UiActionState ToolBarItem::state() const
+bool ToolBarItem::enabled() const
 {
-    return m_state;
+    return m_enabled;
+}
+
+void ToolBarItem::setEnabled(bool enabled)
+{
+    if (m_enabled == enabled) {
+        return;
+    }
+
+    m_enabled = enabled;
+    emit stateChanged();
+}
+
+void ToolBarItem::activate()
+{
+    static constexpr Qt::KeyboardModifiers relevantModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
+    const Qt::KeyboardModifiers modifiers = application()->keyboardModifiers() & relevantModifiers;
+    const std::string intent = muse::value(m_intents, modifiers, this->intent());
+
+    if (strings::startsWith(intent, "command://")) {
+        commandDispatcher()->dispatch(rcommand::Command(intent), m_params);
+    } else {
+#ifdef MUSE_MODULE_ACTIONS_SUPPORT
+        dispatcher()->dispatch(intent, m_args);
+#endif
+    }
+}
+
+void ToolBarItem::handleMenuItem(const QString& menuId)
+{
+    for (const MenuItem* menuItem : m_menuItems) {
+        if (menuItem->id() == menuId) {
+#ifdef MUSE_MODULE_ACTIONS_SUPPORT
+            dispatcher()->dispatch(menuItem->actionCode(), menuItem->args());
+#endif
+            return;
+        }
+    }
 }
 
 bool ToolBarItem::selected() const
@@ -85,16 +113,6 @@ ToolBarItemType::Type ToolBarItem::type() const
 const QList<MenuItem*>& ToolBarItem::menuItems() const
 {
     return m_menuItems;
-}
-
-const UiAction& ToolBarItem::action() const
-{
-    return m_action;
-}
-
-muse::actions::ActionData ToolBarItem::args() const
-{
-    return m_args;
 }
 
 bool ToolBarItem::isValid() const
@@ -119,32 +137,22 @@ void ToolBarItem::setId(const QString& id)
 
 void ToolBarItem::setTitle(const TranslatableString& title)
 {
-    if (m_action.title == title) {
+    if (m_title == title) {
         return;
     }
 
-    m_action.title = title;
-    emit actionChanged();
+    m_title = title;
+    emit itemChanged();
 }
 
 void ToolBarItem::setDescription(const TranslatableString& description)
 {
-    if (m_action.description == description) {
+    if (m_description == description) {
         return;
     }
 
-    m_action.description = description;
-    emit actionChanged();
-}
-
-void ToolBarItem::setState(const UiActionState& state)
-{
-    if (m_state == state) {
-        return;
-    }
-
-    m_state = state;
-    emit stateChanged();
+    m_description = description;
+    emit itemChanged();
 }
 
 void ToolBarItem::setSelected(bool selected)
@@ -177,16 +185,6 @@ void ToolBarItem::setMenuItems(const QList<MenuItem*>& menuItems)
     emit menuItemsChanged(m_menuItems, m_id);
 }
 
-void ToolBarItem::setAction(const UiAction& action)
-{
-    if (m_action == action) {
-        return;
-    }
-
-    m_action = action;
-    emit actionChanged();
-}
-
 void ToolBarItem::setShortcuts(const std::vector<std::string>& shortcuts)
 {
     if (m_shortcuts == shortcuts) {
@@ -197,39 +195,29 @@ void ToolBarItem::setShortcuts(const std::vector<std::string>& shortcuts)
     emit shortcutsChanged();
 }
 
-void ToolBarItem::setArgs(const muse::actions::ActionData& args)
-{
-    m_args = args;
-}
-
 QString muse::uicomponents::ToolBarItem::code_property() const
 {
-    return QString::fromStdString(m_action.code);
+    return QString::fromStdString(intent());
 }
 
 QString ToolBarItem::description_property() const
 {
-    return m_action.description.qTranslated();
+    return m_description.qTranslated();
 }
 
 int ToolBarItem::icon_property() const
 {
-    return static_cast<int>(m_action.iconCode);
-}
-
-bool ToolBarItem::enabled_property() const
-{
-    return m_state.enabled;
+    return static_cast<int>(m_icon);
 }
 
 bool ToolBarItem::checkable_property() const
 {
-    return m_action.checkable == Checkable::Yes;
+    return m_checkable;
 }
 
 bool ToolBarItem::checked_property() const
 {
-    return m_state.checked;
+    return m_checked;
 }
 
 bool ToolBarItem::selected_property() const
@@ -301,3 +289,147 @@ void ToolBarItem::setIsTransparent(bool isTransparent)
     m_isTransparent = isTransparent;
     emit isTransparentChanged();
 }
+
+// command support
+ToolBarItem::ToolBarItem(const rcommand::CommandInfo& info, ToolBarItemType::Type type, QObject* parent)
+    : QObject(parent), Contextable(iocCtxForQmlObject(this))
+{
+    m_type = type;
+    setCommandInfo(info);
+}
+
+void ToolBarItem::setCommandInfo(const rcommand::CommandInfo& info)
+{
+    m_intents[Qt::NoModifier] = info.command.toString();
+    setId(QString::fromStdString(intent()));
+
+    m_title = info.title;
+    m_description = info.description;
+    m_icon = info.decoration.iconCode;
+    m_checkable = info.decoration.checkable == rcommand::Checkable::Yes;
+
+    emit itemChanged();
+}
+
+muse::rcommand::CommandInfo ToolBarItem::commandInfo() const
+{
+    rcommand::CommandInfo info;
+    info.command = rcommand::Command(intent());
+    info.title = m_title;
+    info.description = m_description;
+    info.decoration.iconCode = m_icon;
+    info.decoration.checkable = m_checkable ? rcommand::Checkable::Yes : rcommand::Checkable::No;
+    return info;
+}
+
+void ToolBarItem::setCommand(const rcommand::Command& command, Qt::KeyboardModifiers modifiers)
+{
+    m_intents[modifiers] = command.toString();
+
+    if (modifiers == Qt::NoModifier) {
+        setId(QString::fromStdString(intent()));
+    }
+}
+
+muse::rcommand::Command ToolBarItem::command() const
+{
+    return rcommand::Command(intent());
+}
+
+std::string ToolBarItem::intent() const
+{
+    return muse::value(m_intents, Qt::NoModifier);
+}
+
+void ToolBarItem::setParams(const rcommand::Params& params)
+{
+    m_params = params;
+}
+
+muse::rcommand::Params ToolBarItem::params() const
+{
+    return m_params;
+}
+
+void ToolBarItem::setCommandState(const rcommand::CommandState& state)
+{
+    if (m_enabled == state.enabled && m_checked == state.checked) {
+        return;
+    }
+    m_enabled = state.enabled;
+    m_checked = state.checked;
+    emit stateChanged();
+}
+
+muse::rcommand::CommandState ToolBarItem::commandState() const
+{
+    return rcommand::CommandState(m_enabled, m_checked);
+}
+
+// action support
+
+#ifdef MUSE_MODULE_ACTIONS_SUPPORT
+
+ToolBarItem::ToolBarItem(const UiAction& action, ToolBarItemType::Type type, QObject* parent)
+    : QObject(parent), Contextable(iocCtxForQmlObject(this))
+{
+    m_id = QString::fromStdString(action.code);
+    m_type = type;
+
+    setAction(action);
+}
+
+void ToolBarItem::setAction(const UiAction& action)
+{
+    m_intents[Qt::NoModifier] = action.code;
+    m_title = action.title;
+    m_description = action.description;
+    m_icon = action.iconCode;
+    m_checkable = action.checkable == ui::Checkable::Yes;
+
+    emit itemChanged();
+}
+
+UiAction ToolBarItem::action() const
+{
+    UiAction action;
+    action.code = intent();
+    action.title = m_title;
+    action.description = m_description;
+    action.iconCode = m_icon;
+    action.checkable = m_checkable ? ui::Checkable::Yes : ui::Checkable::No;
+    return action;
+}
+
+muse::actions::ActionCode ToolBarItem::actionCode() const
+{
+    return intent();
+}
+
+void ToolBarItem::setState(const UiActionState& state)
+{
+    if (m_enabled == state.enabled && m_checked == state.checked) {
+        return;
+    }
+
+    m_enabled = state.enabled;
+    m_checked = state.checked;
+    emit stateChanged();
+}
+
+UiActionState ToolBarItem::state() const
+{
+    return { m_enabled, m_checked };
+}
+
+void ToolBarItem::setArgs(const muse::actions::ActionData& args)
+{
+    m_args = args;
+}
+
+muse::actions::ActionData ToolBarItem::args() const
+{
+    return m_args;
+}
+
+#endif

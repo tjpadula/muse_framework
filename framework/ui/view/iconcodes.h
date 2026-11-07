@@ -334,9 +334,14 @@ enum class Code : char16_t {
     DOWN = 0xF3C1,
     UP = 0xF3C2,
 
+    LIKE = 0xF3C5,
+    DISLIKE = 0xF3C6,
+
     LOOP_IN = 0xF3C7,
     LOOP_OUT = 0xF3C8,
     PAUSE = 0xF3C9,
+
+    ERASER = 0xF3CC,
 
     WARNING = 0xF3CE,
     INFO = 0xF3CF,
@@ -553,6 +558,15 @@ enum class Code : char16_t {
     CONTROL_META_KEY = 0xF502,
     OPTION_META_KEY = 0xF503,
     COMMAND_META_KEY = 0xF504,
+
+    TICK_FILLED = 0xF4C4,
+    ERROR_FILLED = 0xF4C6,
+    WARNING_FILLED = 0xF4C8,
+
+    INFO_FILLED = 0xF4CC,
+
+    FADE_HANDLE_IN = 0xF4CD,
+    FADE_HANDLE_OUT = 0xF4CE,
 
     NONE = 0xFFFF
 };

@@ -31,6 +31,8 @@
 #include "cloud/cloudtypes.h"
 #include "cloud/iauthorizationservice.h"
 
+#include "imusescorecomconvertservice.h"
+
 class QIODevice;
 class QString;
 
@@ -46,14 +48,16 @@ public:
 
     virtual IAuthorizationServicePtr authorization() = 0;
 
+    virtual IMuseScoreComConvertServicePtr convert() = 0;
+
     virtual QUrl scoreManagerUrl() const = 0;
 
     virtual ProgressPtr uploadScore(DevicePtr scoreData, const QString& title, cloud::Visibility visibility = cloud::Visibility::Private,
                                     const QUrl& sourceUrl = QUrl(), int revisionId = 0) = 0;
     virtual ProgressPtr uploadAudio(DevicePtr audioData, const QString& audioFormat, const QUrl& sourceUrl) = 0;
 
-    virtual RetVal<ScoreInfo> downloadScoreInfo(const QUrl& sourceUrl) = 0;
-    virtual RetVal<ScoreInfo> downloadScoreInfo(int scoreId) = 0;
+    virtual async::Promise<RetVal<ScoreInfo> > downloadScoreInfo(const QUrl& sourceUrl) = 0;
+    virtual async::Promise<RetVal<ScoreInfo> > downloadScoreInfo(int scoreId) = 0;
 
     /// The MuseScore.com API is a so-called paginated API, which means that
     /// you don't request all scores at once, but you request them in batches.
@@ -63,5 +67,7 @@ public:
 
     virtual ProgressPtr downloadScore(int scoreId, DevicePtr scoreData, const QString& hash = QString(),
                                       const QString& secret = QString()) = 0;
+
+    virtual async::Promise<Ret> deleteScore(int scoreId) = 0;
 };
 }

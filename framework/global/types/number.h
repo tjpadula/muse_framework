@@ -63,6 +63,8 @@ class number_t
 {
 public:
 
+    using value_type = T;
+
     constexpr number_t() = default;
     number_t(T v)
         : m_val(muse::check_valid(v)) {}
@@ -134,7 +136,7 @@ protected:
 template<typename T>
 inline number_t<T> operator*(T a, const number_t<T>& b) { return number_t<T>(a * b.raw()); }
 
-using integer_t = number_t<int>;
+// using integer_t = number_t<int>;
 using real_t = number_t<double>;
 
 template<typename T>

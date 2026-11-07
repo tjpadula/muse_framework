@@ -22,9 +22,11 @@
 #include "modularity/imoduleinterface.h"
 
 #include "global/async/promise.h"
-
+#include "global/async/channel.h"
+#include "global/types/ret.h"
+#include "global/types/retval.h"
 #include "commandtypes.h"
-#include "types/ret.h"
+#include "typedcommand.h"
 
 namespace muse::rcommand {
 class Commandable;
@@ -34,13 +36,22 @@ class ICommandDispatcher : MODULE_CONTEXT_INTERFACE
 public:
     virtual ~ICommandDispatcher() = default;
 
+    using OnResponse = std::function<void (const Response& response)>;
+
     using CallBack = std::function<Response (const Request& request)>;
+    using AsyncCallBack = std::function<void (const Request& request, OnResponse onResponse)>;
+
     using CallBackRet = std::function<Ret ()>;
     using CallBackParamsRet = std::function<Ret (const Params& params)>;
+    using CallBackParamsPromiseRet = std::function<async::Promise<Ret>(const Params& params)>;
 
     virtual async::Promise<Response> dispatch(const Request& request) = 0;
     virtual void onRequest(Commandable* client, const Command& command, const CallBack& callback) = 0;
+    virtual void onRequest(Commandable* client, const Command& command, const AsyncCallBack& callback) = 0;
     virtual void unreg(Commandable* client) = 0;
+
+    virtual async::Channel<Command, bool* /*allow dispatch*/> preDispatch() const = 0;
+    virtual async::Channel<Command> postDispatch() const = 0;
 
     // Helpers for convenience
     async::Promise<Response> dispatch(const Command& command)
@@ -69,6 +80,64 @@ public:
     {
         onRequest(client, command, [callback](const Request& request) {
             return make_response(request, callback(request.params));
+        });
+    }
+
+    void onRequest(Commandable* client, const Command& command, const CallBackParamsPromiseRet& callback)
+    {
+        onRequest(client, command, AsyncCallBack([callback](const Request& request, const OnResponse& onResponse) {
+            answerWhenResolved(request, callback(request.params), onResponse);
+        }));
+    }
+
+    // Typed commands
+    template<TypedCommand C>
+    async::Promise<Response> dispatch(const C& command)
+    {
+        Params params;
+        if constexpr (HasInput<C>) {
+            params = toInputParams(command);
+        }
+        return dispatch(make_request(command.id, params));
+    }
+
+    template<TypedCommand C>
+    void onRequest(Commandable* client, std::function<Ret(const C&)> callback)
+    {
+        onRequest(client, C::id, CallBack([callback](const Request& request) {
+            C command;
+            if constexpr (HasInput<C>) {
+                ConvertParamsResult res = fromInputParams(request.params, command);
+                if (!res) {
+                    return make_response(request, res.ret);
+                }
+            }
+            return make_response(request, callback(command));
+        }));
+    }
+
+    template<HasOutput C>
+    void onRequest(Commandable* client, std::function<RetVal<typename C::Output>(const C&)> callback)
+    {
+        onRequest(client, C::id, CallBack([callback](const Request& request) {
+            C command;
+            if constexpr (HasInput<C>) {
+                ConvertParamsResult res = fromInputParams(request.params, command);
+                if (!res) {
+                    return make_response(request, res.ret);
+                }
+            }
+            RetVal<typename C::Output> rv = callback(command);
+            return make_response(request, rv.ret, toOutputParams<C>(rv.val));
+        }));
+    }
+
+private:
+
+    static void answerWhenResolved(const Request& request, async::Promise<Ret> retPromise, const OnResponse& onResponse)
+    {
+        retPromise.onResolve(nullptr, [request, onResponse](const Ret& ret) {
+            onResponse(make_response(request, ret));
         });
     }
 };
