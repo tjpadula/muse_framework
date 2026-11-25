@@ -342,6 +342,8 @@ Shortcut ShortcutsRegister::readShortcut(XmlStreamReader& reader) const
     }
 
     shortcut.context = action.scCtx;
+    
+//    LOGD() << "Shortcut: " << shortcut.action;
 
     return shortcut;
 }
@@ -369,7 +371,13 @@ Ret ShortcutsRegister::setShortcuts(const ShortcutList& shortcuts)
         mergeAdditionalShortcuts(m_shortcuts);
         m_shortcutsChanged.notify();
     }
-
+    
+#if 0
+    for (const Shortcut& shortcut : shortcuts) {
+        LOGD() << "Shortcut: " << shortcut;
+    }
+#endif
+    
     return ok;
 }
 
