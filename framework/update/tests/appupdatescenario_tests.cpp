@@ -87,8 +87,8 @@ public:
 
         m_commandDispatcher = std::make_shared<NiceMock<rcommand::CommandDispatcherMock> >();
         m_scenario->commandDispatcher.set(m_commandDispatcher);
-        ON_CALL(*m_commandDispatcher, dispatch(_))
-        .WillByDefault([](const rcommand::Request& request) {
+        ON_CALL(*m_commandDispatcher, dispatch(_, _))
+        .WillByDefault([](const rcommand::Request& request, bool) {
             return async::make_promise<rcommand::Response>([request](auto resolve) {
                 return resolve(rcommand::make_response(request, make_ok()));
             });
@@ -254,9 +254,53 @@ public:
         m_downloadProgress.finish(ProgressResult::make_ok(Val(PACKAGE.toStdString())));
     }
 
-    static RetVal<Val> notEnoughDiskSpace()
+    static ::testing::Matcher<const UriQuery&> IsDownloadDialog()
     {
-        return RetVal<Val>(make_ret(Err::NotEnoughDiskSpace, "Free up 250 MB"));
+        return Truly([](const UriQuery& query) {
+            return query.uri() == Uri("muse://update/app");
+        });
+    }
+
+    static ::testing::Matcher<const UriQuery&> IsReleaseInfoDialog()
+    {
+        return Truly([](const UriQuery& query) {
+            return query.uri() == Uri("muse://update/appreleaseinfo");
+        });
+    }
+
+    static async::Promise<Val> downloadedPromise()
+    {
+        return async::make_promise<Val>([](auto resolve, auto) {
+            return resolve(Val(PACKAGE.toStdString()));
+        });
+    }
+
+    //! The download dialog gets the release ready
+    static auto downloaded()
+    {
+        return Invoke([](const UriQuery&) {
+            return downloadedPromise();
+        });
+    }
+
+    //! The download dialog ends with the given error
+    static auto downloadFails(const Ret& error)
+    {
+        return Invoke([error](const UriQuery&) {
+            return async::make_promise<Val>([error](auto, auto reject) {
+                return reject(error.code(), error.text());
+            });
+        });
+    }
+
+    static auto downloadCanceled()
+    {
+        return downloadFails(make_ret(Ret::Code::Cancel));
+    }
+
+    static auto notEnoughDiskSpace()
+    {
+        return downloadFails(make_ret(Err::NotEnoughDiskSpace, "Free up 250 MB"));
     }
 
     //! Drain background work and queued async calls
@@ -288,7 +332,7 @@ public:
 
     static auto quitToInstall()
     {
-        return Invoke([](const rcommand::Request& request) {
+        return Invoke([](const rcommand::Request& request, bool) {
             EXPECT_EQ(request.command, rcommand::Command("command://app/quit"));
             EXPECT_FALSE(request.params.at("all_instances").toBool());
             EXPECT_EQ(request.params.at("installer_path").toString(), PACKAGE.toStdString());
@@ -430,8 +474,8 @@ TEST_F(AppUpdateScenarioTests, BgDownload_NotEnoughDiskSpace_SkipsSilently)
 TEST_F(AppUpdateScenarioTests, ManualDownload_NotEnoughDiskSpace_Cancel_Stops)
 {
     //! [GIVEN] The download dialog refuses to start because the disk is full
-    EXPECT_CALL(*m_interactive, openSync(_))
-    .WillOnce(Return(notEnoughDiskSpace()));
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
+    .WillOnce(notEnoughDiskSpace());
 
     //! [THEN] An error with the details from the service is shown, and the user cancels
     EXPECT_CALL(*m_interactive, error(_, _, _, _, _, _))
@@ -455,9 +499,9 @@ TEST_F(AppUpdateScenarioTests, ManualDownload_NotEnoughDiskSpace_Cancel_Stops)
 TEST_F(AppUpdateScenarioTests, ManualDownload_NotEnoughDiskSpace_Retry_ReopensDownload)
 {
     //! [GIVEN] The disk is still full on the second attempt
-    EXPECT_CALL(*m_interactive, openSync(_))
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
     .Times(2)
-    .WillRepeatedly(Return(notEnoughDiskSpace()));
+    .WillRepeatedly(notEnoughDiskSpace());
 
     //! [THEN] The user retries once, then cancels
     EXPECT_CALL(*m_interactive, error(_, _, _, _, _, _))
@@ -475,9 +519,9 @@ TEST_F(AppUpdateScenarioTests, ManualDownload_NotEnoughDiskSpace_Retry_ReopensDo
 TEST_F(AppUpdateScenarioTests, ManualDownload_NotEnoughDiskSpace_RetrySucceeds_ProceedsToInstall)
 {
     //! [GIVEN] Space was freed up before the retry, so the second attempt downloads the package
-    EXPECT_CALL(*m_interactive, openSync(_))
-    .WillOnce(Return(notEnoughDiskSpace()))
-    .WillOnce(Return(RetVal<Val>::make_ok(Val(std::string("upd/MuseScore.dmg")))));
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
+    .WillOnce(notEnoughDiskSpace())
+    .WillOnce(downloaded());
 
     EXPECT_CALL(*m_interactive, error(_, _, _, _, _, _))
     .WillOnce(dialog(IInteractive::Button::Retry));
@@ -505,7 +549,7 @@ TEST_F(AppUpdateScenarioTests, ManualDownload_ReadyToInstall_GoesStraightToInsta
     .WillByDefault(Return(true));
 
     //! [THEN] The download dialog is not opened; the install prompt is shown
-    EXPECT_CALL(*m_interactive, openSync(_))
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
     .Times(0);
     EXPECT_CALL(*m_interactive, info(_, _, _, _, _, _))
     .WillOnce(installPrompt(IInteractive::Button::Cancel));
@@ -524,11 +568,11 @@ TEST_F(AppUpdateScenarioTests, ManualDownload_NotReady_OpensDownloadDialog_ThenI
     .WillByDefault(Return(false));
 
     //! [THEN] The download dialog gets it ready
-    EXPECT_CALL(*m_interactive, openSync(_))
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
     .WillOnce(Invoke([](const UriQuery& query) {
         EXPECT_EQ(query.uri(), Uri("muse://update/app"));
         EXPECT_EQ(query.param("mode").toString(), "download");
-        return RetVal<Val>::make_ok(Val(PACKAGE.toStdString()));
+        return downloadedPromise();
     }));
 
     //! [THEN] The install prompt follows
@@ -542,8 +586,8 @@ TEST_F(AppUpdateScenarioTests, ManualDownload_NotReady_OpensDownloadDialog_ThenI
 TEST_F(AppUpdateScenarioTests, ManualDownload_Canceled_EndsWithCancel)
 {
     //! [GIVEN] The user closes the download dialog
-    EXPECT_CALL(*m_interactive, openSync(_))
-    .WillOnce(Return(RetVal<Val>(make_ret(Ret::Code::Cancel))));
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
+    .WillOnce(downloadCanceled());
 
     //! [THEN] No error is shown
     EXPECT_CALL(*m_interactive, error(_, _, _, _, _, _))
@@ -563,9 +607,9 @@ TEST_F(AppUpdateScenarioTests, BgDownload_Finished_RestartAndUpdate_QuitsWithout
     givenDownloadedUpdate(INSTALL);
 
     //! [THEN] Nothing is downloaded again, and no prompt is shown: the button already says that the app restarts
-    EXPECT_CALL(*m_interactive, openSync(_))
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
     .Times(0);
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .Times(0);
     EXPECT_CALL(*m_interactive, info(_, _, _, _, _, _))
     .Times(0);
@@ -574,7 +618,7 @@ TEST_F(AppUpdateScenarioTests, BgDownload_Finished_RestartAndUpdate_QuitsWithout
     EXPECT_CALL(*m_configuration, setInstallingReleaseVersion("1000.0"));
     EXPECT_CALL(*m_multiwindowsProvider, quitAllAndRunInstallation(_))
     .Times(0);
-    EXPECT_CALL(*m_commandDispatcher, dispatch(_))
+    EXPECT_CALL(*m_commandDispatcher, dispatch(_, _))
     .WillOnce(quitToInstall());
 
     //! [WHEN] The download finishes
@@ -591,13 +635,13 @@ TEST_F(AppUpdateScenarioTests, BgDownload_NotReadyAnymore_RestartAndUpdate_GetsR
     .WillByDefault(Return(false));
 
     //! [THEN] The download dialog gets it ready again
-    EXPECT_CALL(*m_interactive, openSync(_))
-    .WillOnce(Return(RetVal<Val>::make_ok(Val(PACKAGE.toStdString()))));
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
+    .WillOnce(downloaded());
 
     //! [THEN] Then the app quits to install it, without a prompt
     EXPECT_CALL(*m_interactive, info(_, _, _, _, _, _))
     .Times(0);
-    EXPECT_CALL(*m_commandDispatcher, dispatch(IsAppQuit()));
+    EXPECT_CALL(*m_commandDispatcher, dispatch(IsAppQuit(), _));
 
     //! [WHEN] The download finishes
     finishDownload();
@@ -614,7 +658,7 @@ TEST_F(AppUpdateScenarioTests, BgDownload_Finished_RestartAndUpdate_SeveralWindo
 
     //! [THEN] All windows quit to install the downloaded package
     EXPECT_CALL(*m_multiwindowsProvider, quitAllAndRunInstallation(PACKAGE));
-    EXPECT_CALL(*m_commandDispatcher, dispatch(IsAppQuit()));
+    EXPECT_CALL(*m_commandDispatcher, dispatch(IsAppQuit(), _));
 
     //! [WHEN] The download finishes
     finishDownload();
@@ -628,19 +672,19 @@ TEST_F(AppUpdateScenarioTests, ReleaseInfo_InstallUpdate_Downloads_ThenAsksToRes
     .WillOnce(checkForUpdateResolves(m_lastCheckResult));
 
     //! [GIVEN] The user clicks "Install update" in the release info
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ false, "install"));
 
     //! [THEN] The release is downloaded
-    EXPECT_CALL(*m_interactive, openSync(_))
-    .WillOnce(Return(RetVal<Val>::make_ok(Val(PACKAGE.toStdString()))));
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
+    .WillOnce(downloaded());
 
     //! [THEN] The user is asked to restart, and confirms it
     EXPECT_CALL(*m_interactive, info(_, _, _, _, _, _))
     .WillOnce(installPrompt(IInteractive::Button::Apply));
 
     //! [THEN] The app quits to install it
-    EXPECT_CALL(*m_commandDispatcher, dispatch(IsAppQuit()));
+    EXPECT_CALL(*m_commandDispatcher, dispatch(IsAppQuit(), _));
 
     //! [WHEN] The user checks for updates manually
     m_scenario->checkForUpdate(/*manual*/ true);
@@ -650,8 +694,8 @@ TEST_F(AppUpdateScenarioTests, ReleaseInfo_InstallUpdate_Downloads_ThenAsksToRes
 TEST_F(AppUpdateScenarioTests, InstallPrompt_Cancel_DoesNotQuit)
 {
     //! [GIVEN] The release is not ready to install, and the download dialog gets it ready
-    EXPECT_CALL(*m_interactive, openSync(_))
-    .WillOnce(Return(RetVal<Val>::make_ok(Val(PACKAGE.toStdString()))));
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
+    .WillOnce(downloaded());
 
     //! [GIVEN] The user cancels the restart prompt
     EXPECT_CALL(*m_interactive, info(_, _, _, _, _, _))
@@ -660,7 +704,7 @@ TEST_F(AppUpdateScenarioTests, InstallPrompt_Cancel_DoesNotQuit)
     //! [THEN] The app does not quit
     EXPECT_CALL(*m_configuration, setInstallingReleaseVersion(_))
     .Times(0);
-    EXPECT_CALL(*m_commandDispatcher, dispatch(IsAppQuit()))
+    EXPECT_CALL(*m_commandDispatcher, dispatch(IsAppQuit(), _))
     .Times(0);
 
     //! [WHEN] A manual download is requested
@@ -787,17 +831,17 @@ TEST_F(AppUpdateScenarioTests, BgDownload_Finished_SeeDetails_InstallUsesDownloa
     .WillOnce(toast(DOWNLOADED_TOAST, SEE_DETAILS));
 
     //! [THEN] The release info is opened in the "ready to install" mode, and the user clicks "Restart & update"
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ true, "install"));
 
     //! [THEN] The downloaded package is installed without downloading it again and without a prompt
     ON_CALL(*m_service, downloadedReleasePath())
     .WillByDefault(Return(PACKAGE));
-    EXPECT_CALL(*m_interactive, openSync(_))
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
     .Times(0);
     EXPECT_CALL(*m_interactive, info(_, _, _, _, _, _))
     .Times(0);
-    EXPECT_CALL(*m_commandDispatcher, dispatch(_))
+    EXPECT_CALL(*m_commandDispatcher, dispatch(_, _))
     .WillOnce(quitToInstall());
 
     //! [WHEN] The download finishes
@@ -822,11 +866,11 @@ TEST_F(AppUpdateScenarioTests, AutoCheck_AutoUpdateDisabled_InstallUpdate_Downlo
     .WillOnce(toast(AVAILABLE_TOAST, INSTALL));
 
     //! [THEN] The download dialog is opened, followed by the install prompt
-    EXPECT_CALL(*m_interactive, openSync(_))
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
     .WillOnce(Invoke([](const UriQuery& query) {
         EXPECT_EQ(query.uri(), Uri("muse://update/app"));
         EXPECT_EQ(query.param("mode").toString(), "download");
-        return RetVal<Val>::make_ok(Val(std::string("upd/MuseScore.dmg")));
+        return downloadedPromise();
     }));
     ON_CALL(*m_service, canAutoInstall())
     .WillByDefault(Return(false));
@@ -851,11 +895,11 @@ TEST_F(AppUpdateScenarioTests, AutoCheck_AutoUpdateDisabled_SeeDetails_OpensRele
     .WillOnce(toast(AVAILABLE_TOAST, SEE_DETAILS));
 
     //! [THEN] The release info is opened (not in the "ready to install" mode); the user postpones
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ false, "remindLater"));
 
     //! [THEN] Nothing is downloaded
-    EXPECT_CALL(*m_interactive, openSync(_))
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
     .Times(0);
 
     //! [WHEN] An automatic check finds an update
@@ -893,7 +937,7 @@ TEST_F(AppUpdateScenarioTests, ManualCheck_ReleaseAlreadyDownloaded_OpensReadyTo
     //! [THEN] No toast is shown; the release info is opened in the "ready to install" mode
     EXPECT_CALL(*m_toastService, show(_, _, _, _, _))
     .Times(0);
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ true, "remindLater"));
 
     //! [WHEN] The user checks for updates manually
@@ -910,7 +954,7 @@ TEST_F(AppUpdateScenarioTests, ManualCheck_ReleaseNotDownloaded_OpensReleaseInfo
     //! [THEN] No toast is shown; the release info is opened in the regular mode
     EXPECT_CALL(*m_toastService, show(_, _, _, _, _))
     .Times(0);
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ false, "remindLater"));
 
     //! [WHEN] The user checks for updates manually
@@ -927,7 +971,7 @@ TEST_F(AppUpdateScenarioTests, ReleaseInfo_PassesCurrentAutoUpdateSetting)
     .WillOnce(checkForUpdateResolves(m_lastCheckResult));
 
     //! [THEN] The dialog gets the current setting for its toggle
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(Invoke([](const UriQuery& query) {
         EXPECT_FALSE(query.param("autoUpdateEnabled").toBool());
         return async::make_promise<Val>([](auto resolve) {
@@ -953,12 +997,12 @@ TEST_F(AppUpdateScenarioTests, ReleaseInfo_RemindLater_AppliesAutoUpdateToggle)
     .WillOnce(checkForUpdateResolves(m_lastCheckResult));
 
     //! [GIVEN] The user turns the toggle on and clicks "Remind me later"
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ false, "remindLater", /*autoUpdateEnabled*/ true));
 
     //! [THEN] The setting is saved, and nothing is downloaded
     EXPECT_CALL(*m_configuration, setAutoUpdateEnabled(true));
-    EXPECT_CALL(*m_interactive, openSync(_))
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
     .Times(0);
 
     //! [WHEN] The user checks for updates manually
@@ -975,12 +1019,12 @@ TEST_F(AppUpdateScenarioTests, ReleaseInfo_Closed_AppliesAutoUpdateToggle)
     .WillOnce(checkForUpdateResolves(m_lastCheckResult));
 
     //! [GIVEN] The user turns the toggle on and closes the dialog (close button or Escape)
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ false, "close", /*autoUpdateEnabled*/ true));
 
     //! [THEN] The setting is saved, and nothing is downloaded or skipped
     EXPECT_CALL(*m_configuration, setAutoUpdateEnabled(true));
-    EXPECT_CALL(*m_interactive, openSync(_))
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
     .Times(0);
     EXPECT_CALL(*m_configuration, setSkippedReleaseVersion(_))
     .Times(0);
@@ -999,7 +1043,7 @@ TEST_F(AppUpdateScenarioTests, ManualCheck_SkippedRelease_RemindLater_UnskipsRel
     .WillOnce(checkForUpdateResolves(m_lastCheckResult));
 
     //! [GIVEN] The user checks for updates manually and chooses "Remind me later"
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ false, "remindLater"));
 
     //! [THEN] The release is no longer skipped, so it is offered again later
@@ -1019,15 +1063,15 @@ TEST_F(AppUpdateScenarioTests, ManualCheck_SkippedRelease_Install_UnskipsRelease
     .WillOnce(checkForUpdateResolves(m_lastCheckResult));
 
     //! [GIVEN] The user checks for updates manually and chooses to install
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ false, "install"));
 
     //! [THEN] The release is no longer skipped
     EXPECT_CALL(*m_configuration, setSkippedReleaseVersion(""));
 
     //! [GIVEN] The download dialog is closed
-    EXPECT_CALL(*m_interactive, openSync(_))
-    .WillOnce(Return(RetVal<Val>(make_ret(Ret::Code::Cancel))));
+    EXPECT_CALL(*m_interactive, open(IsDownloadDialog()))
+    .WillOnce(downloadCanceled());
 
     //! [WHEN] The user checks for updates manually
     m_scenario->checkForUpdate(/*manual*/ true);
@@ -1043,7 +1087,7 @@ TEST_F(AppUpdateScenarioTests, ManualCheck_SkippedRelease_Closed_KeepsReleaseSki
     .WillOnce(checkForUpdateResolves(m_lastCheckResult));
 
     //! [GIVEN] The user checks for updates manually and just closes the dialog
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ false, "close"));
 
     //! [THEN] The release stays skipped
@@ -1062,7 +1106,7 @@ TEST_F(AppUpdateScenarioTests, ReleaseInfo_Skip_AppliesAutoUpdateToggle)
     .WillOnce(checkForUpdateResolves(m_lastCheckResult));
 
     //! [GIVEN] The user turns the toggle off and skips the release
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ false, "skip", /*autoUpdateEnabled*/ false));
 
     //! [THEN] The setting is saved and the release is skipped
@@ -1094,12 +1138,12 @@ TEST_F(AppUpdateScenarioTests, BgDownload_Finished_SeeDetails_AppliesAutoUpdateT
     //! turns the toggle off and clicks "Restart & update"
     EXPECT_CALL(*m_toastService, show(_, _, _, _, _))
     .WillOnce(toast(DOWNLOADED_TOAST, SEE_DETAILS));
-    EXPECT_CALL(*m_interactive, open(_))
+    EXPECT_CALL(*m_interactive, open(IsReleaseInfoDialog()))
     .WillOnce(releaseInfoDialog(/*readyToInstall*/ true, "install", /*autoUpdateEnabled*/ false));
 
     //! [THEN] The setting is saved and the app quits to install the update
     EXPECT_CALL(*m_configuration, setAutoUpdateEnabled(false));
-    EXPECT_CALL(*m_commandDispatcher, dispatch(IsAppQuit()));
+    EXPECT_CALL(*m_commandDispatcher, dispatch(IsAppQuit(), _));
 
     //! [WHEN] The download finishes
     m_downloadProgress.finish(ProgressResult::make_ok(Val(std::string("upd/MuseScore.dmg"))));

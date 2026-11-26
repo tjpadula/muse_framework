@@ -177,7 +177,9 @@ bool GuiApplication::loadMainWindow(const muse::modularity::ContextPtr& ctxId)
         return false;
     }
 
-#if defined(Q_OS_MACOS)
+#if defined(MUSE_CONFIGURATION_IS_WEB)
+    QString platform = "web";
+#elif defined(Q_OS_MACOS)
     QString platform = "mac";
 #elif defined(Q_OS_IOS)
     QString platform = "ios";

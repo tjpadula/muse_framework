@@ -21,7 +21,9 @@
  */
  #include <gtest/gtest.h>
 
+ #include <array>
  #include <string>
+ #include <type_traits>
 
 #include "rcommand/typedcommand.h"
 #include "rcommand/enumcontract.h"
@@ -51,7 +53,7 @@ struct TestEnumContract {
 };
 
 namespace muse::rcommand {
-DECLARE_ENUM_CONTRACT(TestEnum, TestEnumContract);
+DECLARE_ENUM_CONTRACT(TestEnumContract);
 }
 
 struct TestCommand {
@@ -81,7 +83,7 @@ struct TestCommand {
         TestEnum eVal = TestEnum::Value1;
     };
 
-    static constexpr auto input = FieldsScheme {
+    static const inline auto input = FieldsScheme {
         Field("b_val", &TestCommand::bVal, "Boolean value"),
         Field("i_val", &TestCommand::iVal, "Integer value", -100, 100),
         Field("u_val", &TestCommand::uVal, "Unsigned integer value", Presence::Optional),
@@ -94,7 +96,7 @@ struct TestCommand {
     };
 
     using O = TestCommand::Output;
-    static constexpr auto output = FieldsScheme {
+    static const inline auto output = FieldsScheme {
         Field("b_val", &O::bVal, "Boolean value"),
         Field("i_val", &O::iVal, "Integer value", -100, 100),
         Field("u_val", &O::uVal, "Unsigned integer value", Presence::Optional),
@@ -107,13 +109,25 @@ struct TestCommand {
     };
 };
 
+//! A command that delegates to another command, fixing some of its input values
+struct TestAliasCommand {
+    static const inline auto id = muse::rcommand::Command("command://rcommand/test-alias");
+    static const inline auto title = MnemonicString("action", "Alias test command");
+    static const inline auto description = TranslatableString("action", "Delegates to the test command");
+
+    static const inline auto redirect = TestCommand {
+        .bVal = true,
+        .iVal = 1,
+    };
+};
+
 //! A command without parameters that declares its decoration and its availabilities
 struct TestInternalCommand {
     static const inline auto id = muse::rcommand::Command("command://rcommand/test-internal");
     static const inline auto title = MnemonicString("action", "Internal test command");
     static const inline auto description = TranslatableString("action", "Dispatch only");
     static const inline auto decoration = Decoration(Checkable::Yes);
-    static const inline Availabilities availabilities = Availability::Dispatch;
+    static const inline Availabilities availabilities = Availability::Internal;
 };
 
 TEST_F(RCommand_TypedCommandTests, TypedCommand_Convert)
@@ -196,35 +210,35 @@ TEST_F(RCommand_TypedCommandTests, TypedCommand_InputSchema)
     EXPECT_EQ(schema.args.size(), 9);
 
     EXPECT_EQ(schema.args.at("b_val").dataType, DataType::Bool);
-    EXPECT_EQ(schema.args.at("b_val").description, std::string("Boolean value"));
+    EXPECT_EQ(schema.args.at("b_val").description.str.toStdString(), std::string("Boolean value"));
 
     EXPECT_EQ(schema.args.at("i_val").dataType, DataType::Int);
-    EXPECT_EQ(schema.args.at("i_val").description, std::string("Integer value"));
+    EXPECT_EQ(schema.args.at("i_val").description.str.toStdString(), std::string("Integer value"));
     EXPECT_EQ(schema.args.at("i_val").min->toInt(), -100);
     EXPECT_EQ(schema.args.at("i_val").max->toInt(), 100);
 
     EXPECT_EQ(schema.args.at("u_val").dataType, DataType::Int);
-    EXPECT_EQ(schema.args.at("u_val").description, std::string("Unsigned integer value"));
+    EXPECT_EQ(schema.args.at("u_val").description.str.toStdString(), std::string("Unsigned integer value"));
 
     EXPECT_EQ(schema.args.at("i64_val").dataType, DataType::Int64);
-    EXPECT_EQ(schema.args.at("i64_val").description, std::string("64-bit integer value"));
+    EXPECT_EQ(schema.args.at("i64_val").description.str.toStdString(), std::string("64-bit integer value"));
 
     EXPECT_EQ(schema.args.at("u64_val").dataType, DataType::Int64);
-    EXPECT_EQ(schema.args.at("u64_val").description, std::string("64-bit unsigned integer value"));
+    EXPECT_EQ(schema.args.at("u64_val").description.str.toStdString(), std::string("64-bit unsigned integer value"));
 
     EXPECT_EQ(schema.args.at("f_val").dataType, DataType::Float);
-    EXPECT_EQ(schema.args.at("f_val").description, std::string("Float value"));
+    EXPECT_EQ(schema.args.at("f_val").description.str.toStdString(), std::string("Float value"));
     EXPECT_EQ(schema.args.at("f_val").min->toFloat(), 0.0f);
     EXPECT_EQ(schema.args.at("f_val").max->toFloat(), 100.0f);
 
     EXPECT_EQ(schema.args.at("d_val").dataType, DataType::Double);
-    EXPECT_EQ(schema.args.at("d_val").description, std::string("Double value"));
+    EXPECT_EQ(schema.args.at("d_val").description.str.toStdString(), std::string("Double value"));
 
     EXPECT_EQ(schema.args.at("s_val").dataType, DataType::String);
-    EXPECT_EQ(schema.args.at("s_val").description, std::string("String value"));
+    EXPECT_EQ(schema.args.at("s_val").description.str.toStdString(), std::string("String value"));
 
     EXPECT_EQ(schema.args.at("e_val").dataType, DataType::Enum);
-    EXPECT_EQ(schema.args.at("e_val").description, std::string("Enum value"));
+    EXPECT_EQ(schema.args.at("e_val").description.str.toStdString(), std::string("Enum value"));
 }
 
 TEST_F(RCommand_TypedCommandTests, TypedCommand_OutputSchema)
@@ -236,35 +250,35 @@ TEST_F(RCommand_TypedCommandTests, TypedCommand_OutputSchema)
     EXPECT_EQ(schema.args.size(), 9);
 
     EXPECT_EQ(schema.args.at("b_val").dataType, DataType::Bool);
-    EXPECT_EQ(schema.args.at("b_val").description, std::string("Boolean value"));
+    EXPECT_EQ(schema.args.at("b_val").description.str.toStdString(), std::string("Boolean value"));
 
     EXPECT_EQ(schema.args.at("i_val").dataType, DataType::Int);
-    EXPECT_EQ(schema.args.at("i_val").description, std::string("Integer value"));
+    EXPECT_EQ(schema.args.at("i_val").description.str.toStdString(), std::string("Integer value"));
     EXPECT_EQ(schema.args.at("i_val").min->toInt(), -100);
     EXPECT_EQ(schema.args.at("i_val").max->toInt(), 100);
 
     EXPECT_EQ(schema.args.at("u_val").dataType, DataType::Int);
-    EXPECT_EQ(schema.args.at("u_val").description, std::string("Unsigned integer value"));
+    EXPECT_EQ(schema.args.at("u_val").description.str.toStdString(), std::string("Unsigned integer value"));
 
     EXPECT_EQ(schema.args.at("i64_val").dataType, DataType::Int64);
-    EXPECT_EQ(schema.args.at("i64_val").description, std::string("64-bit integer value"));
+    EXPECT_EQ(schema.args.at("i64_val").description.str.toStdString(), std::string("64-bit integer value"));
 
     EXPECT_EQ(schema.args.at("u64_val").dataType, DataType::Int64);
-    EXPECT_EQ(schema.args.at("u64_val").description, std::string("64-bit unsigned integer value"));
+    EXPECT_EQ(schema.args.at("u64_val").description.str.toStdString(), std::string("64-bit unsigned integer value"));
 
     EXPECT_EQ(schema.args.at("f_val").dataType, DataType::Float);
-    EXPECT_EQ(schema.args.at("f_val").description, std::string("Float value"));
+    EXPECT_EQ(schema.args.at("f_val").description.str.toStdString(), std::string("Float value"));
     EXPECT_EQ(schema.args.at("f_val").min->toFloat(), 0.0f);
     EXPECT_EQ(schema.args.at("f_val").max->toFloat(), 100.0f);
 
     EXPECT_EQ(schema.args.at("d_val").dataType, DataType::Double);
-    EXPECT_EQ(schema.args.at("d_val").description, std::string("Double value"));
+    EXPECT_EQ(schema.args.at("d_val").description.str.toStdString(), std::string("Double value"));
 
     EXPECT_EQ(schema.args.at("s_val").dataType, DataType::String);
-    EXPECT_EQ(schema.args.at("s_val").description, std::string("String value"));
+    EXPECT_EQ(schema.args.at("s_val").description.str.toStdString(), std::string("String value"));
 
     EXPECT_EQ(schema.args.at("e_val").dataType, DataType::Enum);
-    EXPECT_EQ(schema.args.at("e_val").description, std::string("Enum value"));
+    EXPECT_EQ(schema.args.at("e_val").description.str.toStdString(), std::string("Enum value"));
 }
 
 TEST_F(RCommand_TypedCommandTests, TypedCommand_Concepts)
@@ -279,7 +293,18 @@ TEST_F(RCommand_TypedCommandTests, TypedCommand_Concepts)
     static_assert(HasDecoration<TestInternalCommand>);
     static_assert(HasAvailabilities<TestInternalCommand>);
 
+    //! redirect
+    static_assert(HasRedirect<TestAliasCommand>);
+    static_assert(!HasRedirect<TestCommand>);
+    static_assert(!HasRedirect<TestInternalCommand>);
+
     static_assert(!TypedCommand<Command>);
+
+    //! the type of a static data member is const-qualified,
+    //! so the underlying command is checked through TypedCommandType
+    static_assert(TypedCommandType<decltype(TestAliasCommand::redirect)>);
+    static_assert(std::is_same_v<std::remove_cvref_t<decltype(TestAliasCommand::redirect)>, TestCommand>);
+    static_assert(!TypedCommandType<decltype(TestAliasCommand::id)>);
 }
 
 TEST_F(RCommand_TypedCommandTests, MakeCommandInfo_TakesEverythingFromTheStruct)
@@ -301,7 +326,7 @@ TEST_F(RCommand_TypedCommandTests, MakeCommandInfo_TakesEverythingFromTheStruct)
     EXPECT_TRUE(internal.inputSchema.args.empty());
     EXPECT_TRUE(internal.outputSchema.args.empty());
     EXPECT_EQ(internal.decoration.checkable, Checkable::Yes);
-    EXPECT_TRUE(internal.availabilities.testFlag(Availability::Dispatch));
+    EXPECT_TRUE(internal.availabilities.testFlag(Availability::Internal));
     EXPECT_FALSE(internal.availabilities.testFlag(Availability::MCP));
 }
 
@@ -470,4 +495,17 @@ TEST_F(RCommand_TypedCommandTests, EnumContract_RoundTrip)
     EXPECT_EQ(EnumContract<TestEnum>::str_val(TestEnum::Value2), "value2");
     EXPECT_EQ(EnumContract<TestEnum>::enum_val("value3"), TestEnum::Value3);
     EXPECT_FALSE(EnumContract<TestEnum>::enum_val("value4").has_value());
+}
+
+TEST_F(RCommand_TypedCommandTests, EnumContract_Concepts)
+{
+    static_assert(IsEnumTable<decltype(TestEnumContract::table)>);
+    static_assert(IsEnumTable<const EnumTable<TestEnum, 3>&>);
+    static_assert(!IsEnumTable<std::array<int, 3> >);
+    static_assert(!IsEnumTable<int>);
+    static_assert(std::is_same_v<EnumTableEnum<decltype(TestEnumContract::table)>, TestEnum>);
+
+    static_assert(IsEnumContract<TestEnumContract>);
+    static_assert(!IsEnumContract<TestCommand>);
+    SUCCEED();
 }

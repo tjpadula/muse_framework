@@ -23,13 +23,14 @@
 #pragma once
 
 #include "api/apiobject.h"
+#include "async/asyncable.h"
 
 #include "modularity/ioc.h"
 #include "interactive/iinteractive.h"
 #include "interactive/iplatforminteractive.h"
 
 namespace muse::interactive {
-class InteractiveApi : public api::ApiObject
+class InteractiveApi : public api::ApiObject, public async::Asyncable
 {
     Q_OBJECT
 
@@ -73,11 +74,11 @@ public:
     };
     Q_ENUM(ButtonCode);
 
-    Q_INVOKABLE void info(const QString& contentTitle, const QString& text);
-    Q_INVOKABLE void warning(const QString& contentTitle, const QString& text);
-    Q_INVOKABLE void error(const QString& contentTitle, const QString& text);
+    Q_INVOKABLE QJSValue info(const QString& contentTitle, const QString& text);
+    Q_INVOKABLE QJSValue warning(const QString& contentTitle, const QString& text);
+    Q_INVOKABLE QJSValue error(const QString& contentTitle, const QString& text);
 
-    Q_INVOKABLE QString question(const QString& contentTitle, const QString& text, const QJSValueList& buttons);
+    Q_INVOKABLE QJSValue question(const QString& contentTitle, const QString& text, const QJSValueList& buttons);
 
     Q_INVOKABLE void openUrl(const QString& url);
 

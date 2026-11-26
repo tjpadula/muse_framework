@@ -149,7 +149,7 @@ std::optional<int> Val::doToInt() const
         }
         try {
             return std::stoi(str);
-        } catch (const std::exception& e) {
+        } catch (const std::exception&) {
             return std::nullopt;
         }
     }
@@ -179,7 +179,7 @@ std::optional<int64_t> Val::doToInt64() const
         }
         try {
             return std::stoll(str);
-        } catch (const std::exception& e) {
+        } catch (const std::exception&) {
             return std::nullopt;
         }
     }
@@ -209,7 +209,7 @@ std::optional<double> Val::doToDouble() const
         }
         try {
             return std::stod(str);
-        } catch (const std::exception& e) {
+        } catch (const std::exception&) {
             return std::nullopt;
         }
     }
@@ -368,7 +368,14 @@ Val::Val(const QString& str)
     : m_val(str.toStdString()), m_type(Type::String) {}
 
 Val::Val(const QColor& color)
-    : m_val(color.name().toStdString()), m_type(Type::Color) {}
+    : m_val(
+        (color.alpha() == 255
+         ? color.name()
+         : color.name(QColor::HexArgb)
+        ).toStdString()
+        ),
+    m_type(Type::Color)
+{}
 
 QString Val::toQString() const
 {

@@ -48,10 +48,22 @@ InteractiveApi::InteractiveApi(api::IApiEngine* e)
  * @method
  * @param {String} title Title
  * @param {String} text Message
+ * @return {Promise} - resolved when the message is closed
+ * @example
+ * Interactive.info("My title", "Some information").then(function() {
+ *     ...
+ * })
  */
-void InteractiveApi::info(const QString& contentTitle, const QString& text)
+QJSValue InteractiveApi::info(const QString& contentTitle, const QString& text)
 {
-    interactive()->infoSync(contentTitle.toStdString(), text.toStdString());
+    api::JsPromise promise = engine()->newPromise();
+
+    interactive()->info(contentTitle.toStdString(), IInteractive::Text(text.toStdString()))
+    .onResolve(this, [resolve = promise.resolve](const IInteractive::Result&) {
+        resolve.call();
+    });
+
+    return promise.promise;
 }
 
 /** APIDOC
@@ -59,10 +71,22 @@ void InteractiveApi::info(const QString& contentTitle, const QString& text)
  * @method
  * @param {String} title Title
  * @param {String} text Message
+ * @return {Promise} - resolved when the message is closed
+ * @example
+ * Interactive.warning("My title", "Some warning").then(function() {
+ *     ...
+ * })
  */
-void InteractiveApi::warning(const QString& contentTitle, const QString& text)
+QJSValue InteractiveApi::warning(const QString& contentTitle, const QString& text)
 {
-    interactive()->warningSync(contentTitle.toStdString(), text.toStdString());
+    api::JsPromise promise = engine()->newPromise();
+
+    interactive()->warning(contentTitle.toStdString(), IInteractive::Text(text.toStdString()))
+    .onResolve(this, [resolve = promise.resolve](const IInteractive::Result&) {
+        resolve.call();
+    });
+
+    return promise.promise;
 }
 
 /** APIDOC
@@ -70,10 +94,22 @@ void InteractiveApi::warning(const QString& contentTitle, const QString& text)
  * @method
  * @param {String} title Title
  * @param {String} text Message
+ * @return {Promise} - resolved when the message is closed
+ * @example
+ * Interactive.error("My title", "Some error").then(function() {
+ *     ...
+ * })
  */
-void InteractiveApi::error(const QString& contentTitle, const QString& text)
+QJSValue InteractiveApi::error(const QString& contentTitle, const QString& text)
 {
-    interactive()->errorSync(contentTitle.toStdString(), text.toStdString());
+    api::JsPromise promise = engine()->newPromise();
+
+    interactive()->error(contentTitle.toStdString(), IInteractive::Text(text.toStdString()))
+    .onResolve(this, [resolve = promise.resolve](const IInteractive::Result&) {
+        resolve.call();
+    });
+
+    return promise.promise;
 }
 
 static muse::IInteractive::Button buttonFromString(const QString& str)
@@ -109,19 +145,24 @@ std::vector<muse::IInteractive::Button> InteractiveApi::buttons(const QJSValueLi
  * @param {String} title Title
  * @param {String} text Message
  * @param {ButtonCode[]} buttons Code of buttons
- * @return {ButtonCode} - selected button
+ * @return {Promise<ButtonCode>} - selected button
  * @example
- * let btn = api.interactive.question("My question", "Yes or No?", [ButtonCode.Yes, ButtonCode.No]);
- * if (btn === ButtonCode.Yes) {
- *      ...
- * }
+ * api.interactive.question("My question", "Yes or No?", [ButtonCode.Yes, ButtonCode.No]).then(function(btn) {
+ *     if (btn === ButtonCode.Yes) {
+ *         ...
+ *     }
+ * })
  */
-QString InteractiveApi::question(const QString& contentTitle, const QString& text, const QJSValueList& btns)
+QJSValue InteractiveApi::question(const QString& contentTitle, const QString& text, const QJSValueList& btns)
 {
-    IInteractive::Result res = interactive()->questionSync(contentTitle.toStdString(),
-                                                           text.toStdString(),
-                                                           buttons(btns));
-    return buttonToString(res.standardButton());
+    api::JsPromise promise = engine()->newPromise();
+
+    interactive()->question(contentTitle.toStdString(), text.toStdString(), buttons(btns))
+    .onResolve(this, [resolve = promise.resolve](const IInteractive::Result& res) {
+        resolve.call({ QJSValue(buttonToString(res.standardButton())) });
+    });
+
+    return promise.promise;
 }
 
 /** APIDOC

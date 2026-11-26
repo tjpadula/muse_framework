@@ -34,6 +34,8 @@
 #include "interactive/iinteractive.h"
 #include "ui/imainwindow.h"
 #include "global/iapplication.h"
+#include "actions/iactionsdispatcher.h"
+#include "rcommand/icommanddispatcher.h"
 
 #include "scriptengine.h"
 #include "testcaserunner.h"
@@ -61,6 +63,8 @@ class Testflow : public ITestflow, public Contextable, public async::Asyncable
 #endif
     ContextInject<IInteractive> interactive = { this };
     ContextInject<muse::ui::IMainWindow> mainWindow = { this };
+    ContextInject<actions::IActionsDispatcher> actionsDispatcher = { this };
+    ContextInject<rcommand::ICommandDispatcher> commandDispatcher = { this };
 
 public:
     Testflow(const modularity::ContextPtr& iocCtx)
@@ -79,7 +83,9 @@ public:
     int defaultIntervalMsec() const override;
     int intervalMsec() const override;
 
-    void execScript(const io::path_t& path, const Options& opt = Options()) override;
+    RunResult execScript(const io::path_t& path, const ExecOptions& opt = ExecOptions()) override;
+    bool isInteractive() const override;
+    void setSkipDialogsOutsideRun(bool skip) override;
 
     void runTestCase(const TestCase& testCase) override;
     void sleep(int msec) override;
@@ -87,6 +93,7 @@ public:
     void unpause() override;
     void abort() override;
     void fatal(const QString& msg) override;
+    void expectQuit(int timeoutMsec) override;
 
     ITestCaseContextPtr context() const override;
     TestflowInteractivePtr testflowInteractive() const override;
@@ -98,8 +105,10 @@ private:
 
     void affectOnServices();
     void restoreAffectOnServices();
+    void setTestflowInteractiveInstalled(bool installed);
 
     void setStatus(Status st);
+    void failRunningStep(const QString& what);
 
     struct AffectedServiceState {
         bool fontDisabledMerging = false;
@@ -109,6 +118,9 @@ private:
     async::Channel<io::path_t, Status> m_statusChanged;
     async::Channel<StepInfo, Ret> m_stepStatusChanged;
     ScriptEngine* m_engine = nullptr;
+    RunResult m_runResult;
+    bool m_interactive = true;
+    bool m_skipDialogsOutsideRun = false;
     ITestCaseContextPtr m_context = nullptr;
     TestCaseRunner m_runner;
     TestCaseReport m_report;

@@ -20,20 +20,28 @@
 
 #include "../icommanddispatcher.h"
 
+#include "global/async/asyncable.h"
+
+#include "global/modularity/ioc.h"
+#include "../icommandsregister.h"
+
 namespace muse::rcommand {
 class CommandDispatcher : public ICommandDispatcher
 {
+    GlobalInject<ICommandsRegister> commandsRegister;
+
 public:
     CommandDispatcher() = default;
     ~CommandDispatcher() override;
 
-    async::Promise<Response> dispatch(const Request& request) override;
+    async::Promise<Response> dispatch(const Request& request, bool maybeRedirect = true) override;
     void onRequest(Commandable* client, const Command& command, const CallBack& callback) override;
     void onRequest(Commandable* client, const Command& command, const AsyncCallBack& callback) override;
     void unreg(Commandable* client) override;
 
     async::Channel<Command, bool* /*allow dispatch*/> preDispatch() const override;
     async::Channel<Command> postDispatch() const override;
+    async::Channel<Command> notRegistered() const override;
 
     // for utests
     Response dispatch(const Command& command, const Params& params = {});
@@ -46,12 +54,19 @@ private:
         Commandable* client = nullptr;
         CallBack callback = nullptr;
         AsyncCallBack asyncCallback = nullptr;
+
+        Client(Commandable* client, CallBack callback)
+            : client(client), callback(callback) {}
+
+        Client(Commandable* client, AsyncCallBack asyncCallback)
+            : client(client), asyncCallback(asyncCallback) {}
     };
 
-    void reg(Commandable* client, const Command& command, const Client& c);
+    void reg(Commandable* client, const Command& command, std::shared_ptr<Client> c);
 
-    std::map<Command, Client> m_clients;
+    std::map<Command, std::shared_ptr<Client> > m_clients;
     async::Channel<Command, bool* /*allow dispatch*/> m_preDispatch;
     async::Channel<Command> m_postDispatch;
+    async::Channel<Command> m_notRegistered;
 };
 }

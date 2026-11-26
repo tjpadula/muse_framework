@@ -19,7 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "iOSshortcutsinstancemodel.h"
+#include "iosshortcutsinstancemodel.h"
 
 #include <QGuiApplication>
 #include <QKeyEvent>
@@ -310,9 +310,14 @@ static QKeySequence translateToCurrentKeyboardLayout(const QKeySequence& sequenc
     return QKeyCombination(keyCombination.keyboardModifiers(), translatedQKey);
 }
 #endif
+
+iOSShortcutsInstanceModel* muse::shortcuts::giOSShortcuts = nullptr;
+
 iOSShortcutsInstanceModel::iOSShortcutsInstanceModel(QObject* parent)
     : ShortcutsInstanceModel(parent)
 {
+    assert(giOSShortcuts == nullptr);
+    giOSShortcuts = this;
     connect(qApp->inputMethod(), &QInputMethod::localeChanged, this, [this]() {
         doLoadShortcuts();
     });
@@ -415,7 +420,6 @@ void iOSShortcutsInstanceModel::doLoadShortcuts()
 
 void iOSShortcutsInstanceModel::doActivate(const QString& seq)
 {
-    // `seq` will always be in the map, because it comes from one of the QML `Shortcut` objects
-    // and for every such object, we have also created an entry in the map, in `doLoadShortcuts`.
-    ShortcutsInstanceModel::doActivate(m_macSequenceMap.value(seq));
+    // There is no real map, we need to hand in the proper shortcut key sequence.
+    ShortcutsInstanceModel::doActivate(seq);
 }

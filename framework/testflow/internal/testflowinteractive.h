@@ -24,19 +24,22 @@
 
 #include <memory>
 
+#include "async/channel.h"
+
+#include "modularity/ioc.h"
 #include "interactive/iinteractive.h"
+#include "interactive/iinteractiveuriregister.h"
 
 namespace muse::testflow {
 class TestflowInteractive : public IInteractive
 {
+    GlobalInject<interactive::IInteractiveUriRegister> uriRegister;
+
 public:
     TestflowInteractive() = default;
 
     void setRealInteractive(std::shared_ptr<IInteractive> real);
     std::shared_ptr<IInteractive> realInteractive() const;
-
-    Result questionSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons, int defBtn = int(Button::NoButton),
-                        const Options& options = {}, const std::string& dialogTitle = {}) override;
 
     async::Promise<Result> question(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons,
                                     int defBtn = int(Button::NoButton), const Options& options = {},
@@ -45,25 +48,16 @@ public:
     ButtonData buttonData(Button b) const override;
 
     // info
-    Result infoSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons, int defBtn = int(Button::NoButton),
-                    const Options& options = {}, const std::string& dialogTitle = {}) override;
-
     async::Promise<Result> info(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons = {},
                                 int defBtn = int(Button::NoButton), const Options& options = {},
                                 const std::string& dialogTitle = {}) override;
 
     // warning
-    Result warningSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons, int defBtn = int(Button::NoButton),
-                       const Options& options = {}, const std::string& dialogTitle = {}) override;
-
     async::Promise<Result> warning(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons = {},
                                    int defBtn = int(Button::NoButton), const Options& options = {},
                                    const std::string& dialogTitle = {}) override;
 
     // error
-    Result errorSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons, int defBtn = int(Button::NoButton),
-                     const Options& options = {}, const std::string& dialogTitle = {}) override;
-
     async::Promise<Result> error(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons = {},
                                  int defBtn = int(Button::NoButton), const Options& options = {},
                                  const std::string& dialogTitle = {}) override;
@@ -74,26 +68,21 @@ public:
     // files
     virtual async::Promise<io::path_t> selectOpeningFile(const std::string& title, const io::path_t& dir,
                                                          const std::vector<std::string>& filter) override;
-    io::path_t selectOpeningFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
-                                     const int options = 0) override;
-    io::paths_t selectOpeningFilesSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
-                                       const int options = 0) override;
+    async::Promise<io::paths_t> selectOpeningFiles(const std::string& title, const io::path_t& dir,
+                                                   const std::vector<std::string>& filter) override;
     async::Promise<io::path_t> selectSavingFile(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
                                                 bool confirmOverwrite = true) override;
 
-    io::path_t selectSavingFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
-                                    bool confirmOverwrite = true) override;
-
     // dirs
-    io::path_t selectDirectory(const std::string& title, const io::path_t& dir) override;
-    io::paths_t selectMultipleDirectories(const std::string& title, const io::path_t& dir, const io::paths_t& initialDirectories) override;
+    async::Promise<io::path_t> selectDirectory(const std::string& title, const io::path_t& dir) override;
+    async::Promise<io::paths_t> selectMultipleDirectories(const std::string& title, const io::path_t& dir,
+                                                          const io::paths_t& initialDirectories) override;
 
     // color
     async::Promise<Color> selectColor(const Color& color = Color::WHITE, const std::string& title = {}, bool allowAlpha = false) override;
     bool isSelectColorOpened() const override;
 
     // custom
-    RetVal<Val> openSync(const UriQuery& uri) override;
     async::Promise<Val> open(const UriQuery& uri) override;
     RetVal<bool> isOpened(const UriQuery& uri) const override;
     RetVal<bool> isOpened(const Uri& uri) const override;
@@ -103,9 +92,7 @@ public:
 
     async::Promise<Ret> close(const UriQuery& uri) override;
     async::Promise<Ret> close(const Uri& uri) override;
-    Ret closeSync(const UriQuery& uri) override;
     async::Promise<Ret> closeAllDialogs() override;
-    Ret closeAllDialogsSync() override;
 
     // state
     ValCh<Uri> currentUri() const override;
@@ -119,10 +106,73 @@ public:
     // TestflowInteractive
     io::path_t selectedFilePath() const; // last selected file path
 
+    //! NOTE Nobody can answer dialogs in an unattended run, so they are not shown and get Cancel
+    enum class UnattendedDialogs {
+        Show,           // interactive run (default)
+        Skip,           // no test case runs (e.g. the application startup): all dialogs are skipped
+        FailOnMessages  // a test case runs: messages (info, warning, error) are unexpected,
+                        // dialogs and questions are the test case's business
+    };
+    void setUnattendedDialogs(UnattendedDialogs mode);
+
+    async::Channel<std::string /*type*/, std::string /*title*/, std::string /*text*/> unexpectedMessage() const;
+
+    //! =================================
+    //! NOTE Please don't use this
+    //! =================================
+    [[deprecated("Use question() instead")]]
+    Result questionSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons, int defBtn = int(Button::NoButton),
+                        const Options& options = {}, const std::string& dialogTitle = {}) override;
+
+    [[deprecated("Use info() instead")]]
+    Result infoSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons, int defBtn = int(Button::NoButton),
+                    const Options& options = {}, const std::string& dialogTitle = {}) override;
+
+    [[deprecated("Use warning() instead")]]
+    Result warningSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons, int defBtn = int(Button::NoButton),
+                       const Options& options = {}, const std::string& dialogTitle = {}) override;
+
+    [[deprecated("Use error() instead")]]
+    Result errorSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons, int defBtn = int(Button::NoButton),
+                     const Options& options = {}, const std::string& dialogTitle = {}) override;
+
+    [[deprecated("Use selectOpeningFile() instead")]]
+    io::path_t selectOpeningFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
+                                     const int options = 0) override;
+
+    [[deprecated("Use selectOpeningFiles() instead")]]
+    io::paths_t selectOpeningFilesSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
+                                       const int options = 0) override;
+
+    [[deprecated("Use selectSavingFile() instead")]]
+    io::path_t selectSavingFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
+                                    bool confirmOverwrite = true) override;
+
+    [[deprecated("Use selectDirectory() instead")]]
+    io::path_t selectDirectorySync(const std::string& title, const io::path_t& dir) override;
+
+    [[deprecated("Use selectMultipleDirectories() instead")]]
+    io::paths_t selectMultipleDirectoriesSync(const std::string& title, const io::path_t& dir,
+                                              const io::paths_t& initialDirectories) override;
+
+    [[deprecated("Use open() instead")]]
+    RetVal<Val> openSync(const UriQuery& uri) override;
+
+    [[deprecated("Use closeAllDialogs() instead")]]
+    Ret closeAllDialogsSync() override;
+
 private:
     std::shared_ptr<IInteractive> m_real = nullptr;
 
+    bool isDialog(const Uri& uri) const;
+    Result skippedResult(const std::string& type, const std::string& title) const;
+    static async::Promise<Result> resultPromise(const Result& res);
+
+    Result unattendedMessage(const std::string& type, const std::string& title, const Text& text);
+
     io::path_t m_selectedFilePath;
+    UnattendedDialogs m_unattendedDialogs = UnattendedDialogs::Show;
+    async::Channel<std::string, std::string, std::string> m_unexpectedMessage;
 };
 
 using TestflowInteractivePtr = std::shared_ptr<TestflowInteractive>;

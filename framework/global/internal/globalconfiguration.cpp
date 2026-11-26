@@ -138,6 +138,13 @@ io::path_t GlobalConfiguration::appConfigPath() const
     return QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
 }
 
+void GlobalConfiguration::setUserDataDir(const io::path_t& dir)
+{
+    m_userDataDir = dir;
+    m_userAppDataPath = io::path_t();
+    m_userDataPath = io::path_t();
+}
+
 io::path_t GlobalConfiguration::userAppDataPath() const
 {
     if (m_userAppDataPath.empty()) {
@@ -159,9 +166,12 @@ void dumpAllStandardPaths(void)
 
 QString GlobalConfiguration::resolveUserAppDataPath() const
 {
-#if defined(Q_OS_IOS)
-//    dumpAllStandardPaths();   // Is LOGD() not set up yet on the simulator?
+#if !defined(Q_OS_IOS)
+    if (!m_userDataDir.empty()) {
+        return m_userDataDir.toQString() + "/AppData";
+    }
 #endif
+
 #ifdef WIN_PORTABLE
     return QDir::cleanPath(QString("%1/../../../Data/settings").arg(QCoreApplication::applicationDirPath()));
 #elif defined(Q_OS_WASM)
@@ -178,16 +188,26 @@ io::path_t GlobalConfiguration::userBackupPath() const
 
 io::path_t GlobalConfiguration::userDataPath() const
 {
-    static io::path_t p = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + "/" + QCoreApplication::applicationName();
 #if defined(Q_OS_IOS)
+	m_userDataPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + "/" + QCoreApplication::applicationName();
     static bool sOnce = false;
     if (!sOnce) {
 //        dumpAllStandardPaths();
-        LOGD() << "GlobalConfiguration::userDataPath() Document directory: " << p;
+        LOGD() << "GlobalConfiguration::userDataPath() Document directory: " << m_userDataPath;
         sOnce = true;
     }
+    return m_userDataPath;
+#else
+    if (m_userDataPath.empty()) {
+        if (!m_userDataDir.empty()) {
+            m_userDataPath = m_userDataDir + "/UserData";
+        } else {
+            m_userDataPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + "/"
+                             + QCoreApplication::applicationName();
+        }
+    }
+    return m_userDataPath;
 #endif
-    return p;
 }
 
 io::path_t GlobalConfiguration::homePath() const

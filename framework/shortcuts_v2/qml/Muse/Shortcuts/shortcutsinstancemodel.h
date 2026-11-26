@@ -30,8 +30,8 @@
 #include "async/asyncable.h"
 
 #include "modularity/ioc.h"
-#include "icommandshortcutsregister.h"
-#include "ishortcutscontroller.h"
+#include "../../../icommandshortcutsregister.h"
+#include "../../../ishortcutscontroller.h"
 
 namespace muse::shortcuts {
 class ShortcutsInstanceModel : public QObject, public Contextable, public async::Asyncable

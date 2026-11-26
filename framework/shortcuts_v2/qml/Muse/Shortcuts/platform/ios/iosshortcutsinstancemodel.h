@@ -28,6 +28,10 @@
 #include "../../shortcutsinstancemodel.h"
 
 namespace muse::shortcuts {
+
+class iOSShortcutsInstanceModel;
+extern iOSShortcutsInstanceModel* giOSShortcuts;
+
 class iOSShortcutsInstanceModel : public ShortcutsInstanceModel
 {
     Q_OBJECT
